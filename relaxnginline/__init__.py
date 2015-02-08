@@ -26,7 +26,8 @@ import six
 from six.moves.urllib import parse
 from relaxnginline import postprocess
 
-from relaxnginline.constants import *
+from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
+                                     RNG_DEFINE_TAG, RNG_INCLUDE_TAG)
 
 __version__ = "0.0.0"
 
@@ -344,7 +345,8 @@ class Inliner(object):
         """
         Yields the components of an element, as defined in the RELAX NG spec.
 
-        For our purposes, we only care about start elements and define elements.
+        For our purposes, we only care about start elements and define
+        elements.
         """
         assert el.tag in [RNG_START_TAG, RNG_DEFINE_TAG, RNG_INCLUDE_TAG]
         components = el.xpath("rng:start|rng:define", namespaces=NSMAP)
@@ -357,7 +359,6 @@ class Inliner(object):
         for div in div_children:
             for components in self._components(div):
                 yield component
-
 
     def _inline_external_refs(self, grammar, context):
         refs = grammar.xpath("//rng:externalRef", namespaces=NSMAP)
@@ -406,9 +407,9 @@ class Inliner(object):
             raise InvalidGrammarError.from_bad_element(
                 el, "has empty href attribute")
 
-        # RELAX NG / XLink 1.0 permit various characters in href attrs which are
-        # not permitted in URLs. These have to be escaped to make the value a
-        # URL.
+        # RELAX NG / XLink 1.0 permit various characters in href attrs which
+        # are not permitted in URLs. These have to be escaped to make the value
+        # a URL.
         # TODO: The spec references XLINK 1.0, but 1.1 is available which uses
         #       IRIs for href values. Consider supporting these.
         url = escape_reserved_characters(href)
@@ -447,6 +448,7 @@ def make_absolute(url):
         return abspath(url)
     return url
 
+
 def get_rng_url(args):
     url = args["<rng-url>"]
 
@@ -455,6 +457,7 @@ def get_rng_url(args):
         url = url.decode(encoding)
 
     return escape_reserved_characters(make_absolute(url))
+
 
 def main():
     args = docopt.docopt(__doc__)

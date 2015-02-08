@@ -4,6 +4,7 @@ import pytest
 
 from relaxnginline import escape_reserved_characters
 
+
 @pytest.mark.parametrize("href_text,encoded_url", [
     # Spaces are escaped
     ("/foo/bar baz.txt", "/foo/bar%20baz.txt"),

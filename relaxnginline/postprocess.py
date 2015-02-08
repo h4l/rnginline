@@ -28,7 +28,8 @@ class PropagateDatatypeLibraryPostProcess(object):
 
     def postprocess(self, grammar):
         # Resolve the datatypeLibrary of all data and value elements
-        for element in grammar.xpath("//rng:data|//rng:value", namespaces=NSMAP):
+        for element in grammar.xpath("//rng:data|//rng:value",
+                                     namespaces=NSMAP):
             self.resolve_datatypelibrary(element)
 
         # Strip datatypeLibrary from all other elements
