@@ -1,33 +1,25 @@
-"""
-usage: relaxnginline [options] <rng-url> [<rng-output>]
-
-options:
-
-   --propagate-datatypelibrary -p    Propagate datatypeLibrary attributes to
-                                     data and value elements. This can be used
-                                     to work around a bug in libxml2: it
-                                     doesn't find datatypeLibrary attributes on
-                                     div elements.
-"""
-from __future__ import print_function, unicode_literals
+from __future__ import unicode_literals
 
 import contextlib
-import locale
 import re
-from os.path import abspath
-import sys
 import collections
-import pkg_resources
+import pkgutil
 import copy
+from os.path import abspath
 
 from lxml import etree
-import docopt
 import six
 from six.moves.urllib import parse
 from relaxnginline import postprocess
 
 from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
                                      RNG_DEFINE_TAG, RNG_INCLUDE_TAG)
+from relaxnginline.exceptions import (
+    SchemaIncludesSelfError, NoAvailableHandlerError, ParseError,
+    InvalidGrammarError)
+from relaxnginline.urlhandlers import (FilesystemUrlHandler,
+                                       PackageDataUrlHandler)
+
 
 __version__ = "0.0.0"
 
@@ -45,78 +37,23 @@ NEEDS_ESCAPE_RE = re.compile("[^{}]"
                              .format(re.escape(NOT_ESCAPED)).encode("ascii"))
 
 
-RELAXNG_SCHEMA = etree.RelaxNG(etree.parse(
-    pkg_resources.resource_stream("relaxnginline", "relaxng.rng")))
+RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
+    pkgutil.get_data("relaxnginline", "relaxng.rng")))
 
 
-class RelaxngInlineError(BaseException):
-    pass
+def inline_file(path, libxml2_compat=True):
+    """
+    Load and inline a RELAX NG schema on the filesystem at the specified path.
+    """
+    postprocessors = []
+    if libxml2_compat is True:
+        # work around libxml2 bug 744146
+        postprocessors.append(postprocess.datatypelibrary)
 
+    url = FilesystemUrlHandler.make_url(abspath(path))
+    inliner = Inliner([FilesystemUrlHandler()], postprocessors=postprocessors)
 
-class NoAvailableHandlerError(RelaxngInlineError):
-    pass
-
-
-class BadXmlError(RelaxngInlineError):
-    pass
-
-
-class ParseError(BadXmlError):
-    pass
-
-
-class InvalidGrammarError(BadXmlError):
-    @classmethod
-    def from_bad_element(cls, el, msg):
-        return cls("{} on line {} {}"
-                   .format(el.tag, el.sourceline or "??", msg))
-
-
-class DereferenceError(RelaxngInlineError):
-    pass
-
-
-class SchemaIncludesSelfError(InvalidGrammarError, DereferenceError):
-    @classmethod
-    def from_context_stack(cls, url, trigger_el, stack):
-        # Drop tokens from the stack and append the loop-creating el & url
-        url_triggers = [(u, t) for (u, _, t) in stack] + [(url, trigger_el)]
-
-        loop = "".join(cls._format_url_trigger(u, t)
-                       for (u, t) in url_triggers)
-
-        return cls("A schema referenced itself, creating a loop:\n{}"
-                   .format(loop))
-
-    @classmethod
-    def _format_url_trigger(cls, url, trigger_el):
-        if trigger_el is None:
-            return url
-        return ":{} <{}> -> \n{}".format(
-            trigger_el.sourceline, etree.QName(trigger_el).localname, url)
-
-
-class FilesystemUrlHandler(object):
-    def can_handle(self, url):
-        return url.scheme == "file" or url.scheme == ""
-
-    def dereference(self, url):
-        assert self.can_handle(url)
-        # Paths will always be absolute due to relative paths being resolved
-        # against absolute paths.
-        assert url.path.startswith("/")
-        try:
-            # The path is URL-encoded, so it needs decoding before we hit the
-            # filesystem. In addition, it's a UTF-8 byte string rather than
-            # characters, so needs decoding as UTF-8
-            path = parse.unquote(url.path).decode("utf-8")
-
-            with open(path, "rb") as f:
-                return f.read()
-        except IOError as e:
-            err = DereferenceError(
-                "Unable to dereference file url: {}".format(url.geturl()))
-            six.raise_from(err, e)
+    return inliner.load(url)
 
 
 class InlineContext(object):
@@ -173,10 +110,19 @@ class InlineContext(object):
 
 
 class Inliner(object):
-    def __init__(self, handlers=None):
-        if handlers is None:
-            handlers = [FilesystemUrlHandler()]
+    def __init__(self, handlers, postprocessors=[]):
         self.handlers = handlers
+        self.postprocessors = postprocessors
+
+    @classmethod
+    def with_default_handlers(cls, postprocessors=[]):
+        return Inliner([FilesystemUrlHandler(), PackageDataUrlHandler()],
+                       postprocessors=postprocessors)
+
+    def postprocess(self, grammar):
+        for pp in self.postprocessors:
+            grammar = pp.postprocess(grammar)
+        return grammar
 
     def parse_url(self, url):
         if isinstance(url, parse.ParseResult):
@@ -239,19 +185,39 @@ class Inliner(object):
     def get_source_url(self, xml):
         return xml.getroottree().docinfo.URL
 
-    def inline(self, element_or_url):
+    def load(self, url):
         """
-
+        Load a RELAX NG schema from url and inline the <include>/<externalRef>
+        elements.
         """
         context = InlineContext()
-        if isinstance(element_or_url, six.text_type):
-            grammar = self.dereference_url(element_or_url, context)
-        else:
-            # Assume we have an etree Element
-            grammar = element_or_url
-            self.validate_grammar_xml(grammar)
+        grammar = self.dereference_url(url, context)
+        return self.postprocess(self._inline(grammar, context))
 
-        return self._inline(grammar, context)
+    def inline(self, grammar_xml):
+        """
+        Inline the <include>/<externalRef> elements in an already loaded
+        RELAX NG schema.
+
+        Warning: If the href attributes in the XML are relative URLs (as they
+        usually are), the XML's URL MUST be handleable by one of this inliner's
+        handlers. If not, the result of joining the relative href URLs with
+        the XML's URLs will not be resolvable by the handlers.
+
+        In other words, this should hold:
+            >>> any(h.can_handle(grammar_xml.getroottree().docinfo.URL)
+                    for h in inliner.handlers)
+            True
+
+        If you're using absolute URLs in your href attributes then you don't
+        need to worry about the root XML's URL.
+        """
+        context = InlineContext()
+
+        # Assume we have an etree Element
+        self.validate_grammar_xml(grammar_xml)
+
+        return self.postprocess(self._inline(grammar_xml, context))
 
     def _inline(self, grammar, context, trigger_el=None):
 
@@ -433,55 +399,3 @@ def _escape_match(match):
 def escape_reserved_characters(url):
     utf8 = url.encode("utf-8")
     return NEEDS_ESCAPE_RE.sub(_escape_match, utf8).decode("ascii")
-
-
-def make_absolute(url):
-    """
-    If url appears to be a relative filesystem path, make it absolute.
-    """
-    parsed = parse.urlparse(url)
-
-    path_only_url = parse.ParseResult("", "", url, "", "", "")
-
-    if (parsed == path_only_url and not url.startswith("/")):
-        # Looks like a relative filesystem path
-        return abspath(url)
-    return url
-
-
-def get_rng_url(args):
-    url = args["<rng-url>"]
-
-    if six.PY2:
-        encoding = locale.getdefaultlocale()[1] or "ascii"
-        url = url.decode(encoding)
-
-    return escape_reserved_characters(make_absolute(url))
-
-
-def main():
-    args = docopt.docopt(__doc__)
-
-    rng_url = get_rng_url(args)
-    outfile = args["<rng-output>"]
-
-    if outfile is None or outfile == "-":
-        if six.PY3:
-            outfile = sys.stdout.buffer
-        else:
-            outfile = sys.stdout
-
-    # The inliner's paths need to be absolute
-    abs_rng_url = make_absolute(rng_url)
-
-    inliner = Inliner()
-    grammar = inliner.inline(abs_rng_url)
-
-    if args["--propagate-datatypelibrary"]:
-        grammar = postprocess.datatypelibrary(grammar)
-
-    grammar.getroottree().write(outfile)
-
-
-if __name__ == "__main__":
-    main()

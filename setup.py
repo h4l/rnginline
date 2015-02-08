@@ -25,7 +25,7 @@ setup(
     install_requires=["lxml", "docopt", "six"],
     entry_points={
         "console_scripts": [
-            "relaxnginline = relaxnginline:main"
+            "relaxnginline = relaxnginline.cmdline:main"
         ]
     }
 )
