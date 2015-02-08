@@ -11,11 +11,14 @@ options:
 """
 from __future__ import print_function, unicode_literals
 
+import contextlib
 import locale
 import re
 from os.path import abspath
 import sys
 import collections
+import pkg_resources
+import copy
 
 from lxml import etree
 import docopt
@@ -39,6 +42,10 @@ NOT_ESCAPED = "".join(chr(x) for x in
 # Matches chars which must be escaped in href attrs
 NEEDS_ESCAPE_RE = re.compile("[^{}]"
                              .format(re.escape(NOT_ESCAPED)).encode("ascii"))
+
+
+RELAXNG_SCHEMA = etree.RelaxNG(etree.parse(
+    pkg_resources.resource_stream("relaxnginline", "relaxng.rng")))
 
 
 class RelaxngInlineError(BaseException):
@@ -68,6 +75,26 @@ class DereferenceError(RelaxngInlineError):
     pass
 
 
+class SchemaIncludesSelfError(InvalidGrammarError, DereferenceError):
+    @classmethod
+    def from_context_stack(cls, url, trigger_el, stack):
+        # Drop tokens from the stack and append the loop-creating el & url
+        url_triggers = [(u, t) for (u, _, t) in stack] + [(url, trigger_el)]
+
+        loop = "".join(cls._format_url_trigger(u, t)
+                       for (u, t) in url_triggers)
+
+        return cls("A schema referenced itself, creating a loop:\n{}"
+                   .format(loop))
+
+    @classmethod
+    def _format_url_trigger(cls, url, trigger_el):
+        if trigger_el is None:
+            return url
+        return ":{} <{}> -> \n{}".format(
+            trigger_el.sourceline, etree.QName(trigger_el).localname, url)
+
+
 class FilesystemUrlHandler(object):
     def can_handle(self, url):
         return url.scheme == "file" or url.scheme == ""
@@ -89,6 +116,59 @@ class FilesystemUrlHandler(object):
             err = DereferenceError(
                 "Unable to dereference file url: {}".format(url.geturl()))
             six.raise_from(err, e)
+
+
+class InlineContext(object):
+    """
+    Maintains state through an inlining operation to prevent infinite loops,
+    and allow each unique URL to be dereferenced only once.
+    """
+    def __init__(self, dereferenced_urls={}, stack=[]):
+        self.dereferenced_urls = dereferenced_urls
+        self.url_context_stack = stack
+
+    def has_been_dereferenced(self, url):
+        return url in self.dereferenced_urls
+
+    def get_previous_dereference(self, url):
+        return copy.deepcopy(self.dereferenced_urls[url])
+
+    def url_in_context(self, url):
+        return any(u == url for (u, _, _) in self.url_context_stack)
+
+    def _push_context(self, url, trigger_el):
+        if trigger_el is None and len(self.url_context_stack) != 0:
+            raise ValueError("Only the first url can omit a trigger element")
+        if self.url_in_context(url):
+            raise SchemaIncludesSelfError.from_context_stack(
+                url, trigger_el, self.url_context_stack)
+
+        token = object()
+        self.url_context_stack.append((url, token, trigger_el))
+        return token
+
+    def _pop_context(self, url, token):
+        if len(self.url_context_stack) == 0:
+            raise ValueError("Context stack is empty")
+        head = self.url_context_stack.pop()
+        if head[:2] != (url, token):
+            raise ValueError("Context stack head is different from expectation"
+                             ". expected: {}, actual: {}"
+                             .format((url, token), head[:2]))
+
+    def track(self, url, trigger_el=None):
+        """
+        A context manager which keeps track of inlining under the specified
+        url. If an attempt is made to inline a url which is already being
+        inlined, an error will be raised (as it indicates a direct or indirect
+        self reference).
+        """
+        @contextlib.contextmanager
+        def tracker(url):
+            token = self._push_context(url, trigger_el)
+            yield
+            self._pop_context(url, token)
+        return tracker(url)
 
 
 class Inliner(object):
@@ -119,7 +199,10 @@ class Inliner(object):
     def resolve_url(self, base, url):
         return parse.urljoin(base, url)
 
-    def dereference_url(self, url):
+    def dereference_url(self, url, context):
+        if context.has_been_dereferenced(url):
+            return context.get_previous_dereference(url)
+
         parsed_url = self.parse_url(url)
         handler = self.get_handler(url)
         return self.parse_grammar_xml(handler.dereference(parsed_url), url)
@@ -127,54 +210,71 @@ class Inliner(object):
     def parse_grammar_xml(self, xml_string, base_url):
         try:
             xml = etree.fromstring(xml_string, base_url=base_url)
-        except etree.ParseError as e:
-            err = ParseError("Unable to parse result of dereferencing url: {}"
-                             .format(base_url))
-            six.raise_from(err, e)
+        except etree.ParseError as cause:
+            err = ParseError("Unable to parse result of dereferencing url: {}."
+                             " error: {}".format(base_url, cause))
+            six.raise_from(err, cause)
+
+        assert xml.base == base_url
 
         # Ensure the parsed XML is a relaxng grammar
-        if xml.tag != RNG_GRAMMAR_TAG:
-            raise InvalidGrammarError(
-                "Parsed RELAX NG does not start with a grammar element in the "
-                "RELAX NG namespace. got: {}, expected: {}, from url: {}"
-                .format(xml.tag, RNG_GRAMMAR_TAG, base_url))
-        assert xml.base == base_url
+        self.validate_grammar_xml(xml)
+
         return xml
+
+    def validate_grammar_xml(self, grammar):
+        """
+        Checks that grammar is an XML document matching the RELAX NG schema.
+        """
+        try:
+            RELAXNG_SCHEMA.assertValid(grammar)
+        except etree.DocumentInvalid as cause:
+            url = self.get_source_url(grammar) or "??"
+            err = InvalidGrammarError(
+                "The XML document from url: {} was not a valid RELAX NG "
+                "schema: {}".format(url, cause))
+            six.raise_from(err, cause)
+
+    def get_source_url(self, xml):
+        return xml.getroottree().docinfo.URL
 
     def inline(self, element_or_url):
         """
 
         """
+        context = InlineContext()
         if isinstance(element_or_url, six.text_type):
-            return self.inline(self.dereference_url(element_or_url))
+            grammar = self.dereference_url(element_or_url, context)
+        else:
+            # Assume we have an etree Element
+            grammar = element_or_url
+            self.validate_grammar_xml(grammar)
 
-        # Assume we have an etree Element
-        grammar = element_or_url
-        # FIXME: do a proper full validation against the RNG schema here
-        if grammar.tag != RNG_GRAMMAR_TAG:
-            raise InvalidGrammarError(
-                "The root element of the provided XML is not a RELAX NG "
-                "grammar element. got: {}, expected: {}"
-                .format(grammar.tag, RNG_GRAMMAR_TAG))
+        return self._inline(grammar, context)
 
-        # Find include/externalRefs and (recursively) inline them
-        grammar = self._inline_includes(grammar)
-        grammar = self._inline_external_refs(grammar)
+    def _inline(self, grammar, context, trigger_el=None):
+
+        # Track the URLs we're inlining from to detect cycles
+        with context.track(self.get_source_url(grammar), trigger_el):
+            # Find include/externalRefs and (recursively) inline them
+            grammar = self._inline_includes(grammar, context)
+            grammar = self._inline_external_refs(grammar, context)
 
         return grammar
 
-    def _inline_includes(self, grammar):
+    def _inline_includes(self, grammar, context):
         includes = grammar.xpath("//rng:include", namespaces=NSMAP)
 
         for include in includes:
-            self._inline_include(include)
+            self._inline_include(include, context)
 
         return grammar
 
-    def _inline_include(self, include):
+    def _inline_include(self, include, context):
         url = self._get_href_url(include)
 
-        grammar = self.inline(url)
+        grammar = self._inline(self.dereference_url(url, context), context,
+                               trigger_el=include)
 
         # To process an include the RNG spec (4.7) says we need to:
         # - recursively process includes in included grammar
@@ -183,6 +283,12 @@ class Inliner(object):
         # - insert the referenced grammar before any start/define elements in
         #   the include
         # - rename the grammar el to div
+        #
+        # In addition, we need to prevent datatypeLibrary from leaking into
+        # the included grammar. See explanation in _inline_external_ref()
+
+        if "datatypeLibrary" not in grammar.attrib:
+            grammar.attrib["datatypeLibrary"] = ""
 
         self._remove_overridden_components(include, grammar)
 
@@ -253,18 +359,19 @@ class Inliner(object):
                 yield component
 
 
-    def _inline_external_refs(self, grammar):
+    def _inline_external_refs(self, grammar, context):
         refs = grammar.xpath("//rng:externalRef", namespaces=NSMAP)
 
         for ref in refs:
-            self._inline_external_ref(ref)
+            self._inline_external_ref(ref, context)
 
         return grammar
 
-    def _inline_external_ref(self, ref):
+    def _inline_external_ref(self, ref, context):
         url = self._get_href_url(ref)
 
-        grammar = self.inline(url)
+        grammar = self.inline(self.dereference_url(url, context), context,
+                              trigger_el=ref)
 
         # datatypeLibrary: The datatypeLibrary is not inherited into an
         # included file from its parent (see note 2 in section 4.9 of the
@@ -327,8 +434,6 @@ def escape_reserved_characters(url):
     return NEEDS_ESCAPE_RE.sub(_escape_match, utf8).decode("ascii")
 
 
-# TODO: detect href loops - decorator to implicitly track calling context?
-
 def make_absolute(url):
     """
     If url appears to be a relative filesystem path, make it absolute.
@@ -353,7 +458,6 @@ def get_rng_url(args):
 
 def main():
     args = docopt.docopt(__doc__)
-    print(args)
 
     rng_url = get_rng_url(args)
     outfile = args["<rng-output>"]
