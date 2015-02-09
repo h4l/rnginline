@@ -13,7 +13,8 @@ from six.moves.urllib import parse
 from relaxnginline import postprocess
 
 from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
-                                     RNG_DEFINE_TAG, RNG_INCLUDE_TAG)
+                                     RNG_DEFINE_TAG, RNG_INCLUDE_TAG,
+                                     RNG_GRAMMAR_TAG, RNG_NS)
 from relaxnginline.exceptions import (
     SchemaIncludesSelfError, NoAvailableHandlerError, ParseError,
     InvalidGrammarError)
@@ -169,17 +170,45 @@ class Inliner(object):
 
         return xml
 
+    @classmethod
+    def _strip_non_rng(cls, tree):
+        if etree.QName(tree).namespace != RNG_NS:
+            tree.getparent().remove(tree)
+
+        non_rng_attrs = [key for key in tree.attrib.keys()
+                         if etree.QName(key).namespace not in [None, RNG_NS]]
+        for key in non_rng_attrs:
+            del tree.attrib[key]
+
+        for child in tree.iterchildren(tag=etree.Element):
+            cls._strip_non_rng(child)
+
     def validate_grammar_xml(self, grammar):
         """
         Checks that grammar is an XML document matching the RELAX NG schema.
         """
+        url = self.get_source_url(grammar) or "??"
+        msg = ("The XML document from url: {} was not a valid RELAX NG schema:"
+               " {}")
+
+        if grammar.tag != RNG_GRAMMAR_TAG:
+            reason = "The root element is not named {}".format(RNG_GRAMMAR_TAG)
+            raise InvalidGrammarError(msg.format(url, reason))
+
+        # libxml2's RELAX NG validator does not implement <except>, so we can't
+        # validate with the RELAX NG schema which permits foreign
+        # elements/attributes. We can validate against the schema provided in
+        # the RELAX NG spec, which does not permit foreign elements. To do this
+        # we have to manually strip foreign elements from a copy of the XML and
+        # validate that...
+
+        stripped = copy.deepcopy(grammar)
+        self._strip_non_rng(stripped)
+
         try:
-            RELAXNG_SCHEMA.assertValid(grammar)
+            RELAXNG_SCHEMA.assertValid(stripped)
         except etree.DocumentInvalid as cause:
-            url = self.get_source_url(grammar) or "??"
-            err = InvalidGrammarError(
-                "The XML document from url: {} was not a valid RELAX NG "
-                "schema: {}".format(url, cause))
+            err = InvalidGrammarError(msg.format(url, cause))
             six.raise_from(err, cause)
 
     def get_source_url(self, xml):
