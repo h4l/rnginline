@@ -10,7 +10,7 @@ from os.path import abspath
 from lxml import etree
 import six
 from six.moves.urllib import parse
-from relaxnginline import postprocess
+from relaxnginline import postprocess, uri
 
 from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
                                      RNG_DEFINE_TAG, RNG_INCLUDE_TAG,
@@ -145,7 +145,7 @@ class Inliner(object):
                 "No handler can handle url: {}".format(url))
 
     def resolve_url(self, base, url):
-        return parse.urljoin(base, url)
+        return uri.resolve(base, url)
 
     def dereference_url(self, url, context):
         if context.has_been_dereferenced(url):
