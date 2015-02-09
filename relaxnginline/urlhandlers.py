@@ -15,10 +15,18 @@ from relaxnginline.exceptions import DereferenceError
 PACKAGE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]+(\.[a-zA-Z_][a-zA-Z0-9_]+)*$")
 
 
+# Python 3 uses text consistently, but 2 returns bytes from quote/unquote and
+# friends.
+def ensure_text(text_or_bytes, encoding):
+    if isinstance(text_or_bytes, six.text_type):
+        return text_or_bytes
+    return text_or_bytes.decode(encoding)
+
+
 def xlink_url_decode(part):
     # XLink 1.0 permits non-ascii chars in the URL. They are represented as
     # UTF-8, with non-ascii bytes percent encoded.
-    return parse.unquote(part).decode("utf-8")
+    return ensure_text(parse.unquote(part), "utf-8")
 
 
 def file_url(file_path):
@@ -30,7 +38,7 @@ def file_url(file_path):
     if not os.path.isabs(file_path):
         raise ValueError("file_path is not absolute: {}".format(file_path))
 
-    path = pathname2url(file_path.encode("utf-8")).decode("ascii")
+    path = ensure_text(pathname2url(file_path.encode("utf-8")), "ascii")
     return parse.urljoin("file://", path)
 
 
@@ -53,7 +61,7 @@ def python_package_data_url(package, resource_path):
         raise ValueError("resource_path must not start with a slash: {}"
                          .format(resource_path))
 
-    path = parse.quote(resource_path.encode("utf-8")).decode("ascii")
+    path = ensure_text(parse.quote(resource_path.encode("utf-8")), "ascii")
 
     return parse.urlunparse(("pypkgdata", package, path,
                              None, None, None))
@@ -75,7 +83,7 @@ class FilesystemUrlHandler(object):
         # The path is URL-encoded, so it needs decoding before we hit the
         # filesystem. In addition, it's a UTF-8 byte string rather than
         # characters, so needs decoding as UTF-8
-        path = url2pathname(url.path).decode("utf-8")
+        path = ensure_text(url2pathname(url.path), "utf-8")
 
         try:
             with open(path, "rb") as f:
