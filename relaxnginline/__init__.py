@@ -173,7 +173,9 @@ class Inliner(object):
     @classmethod
     def _strip_non_rng(cls, tree):
         if etree.QName(tree).namespace != RNG_NS:
-            tree.getparent().remove(tree)
+            if tree.getparent() is not None:
+                tree.getparent().remove(tree)
+            return None
 
         non_rng_attrs = [key for key in tree.attrib.keys()
                          if etree.QName(key).namespace not in [None, RNG_NS]]
@@ -183,6 +185,8 @@ class Inliner(object):
         for child in tree.iterchildren(tag=etree.Element):
             cls._strip_non_rng(child)
 
+        return tree
+
     def validate_grammar_xml(self, grammar):
         """
         Checks that grammar is an XML document matching the RELAX NG schema.
@@ -191,10 +195,6 @@ class Inliner(object):
         msg = ("The XML document from url: {} was not a valid RELAX NG schema:"
                " {}")
 
-        if grammar.tag != RNG_GRAMMAR_TAG:
-            reason = "The root element is not named {}".format(RNG_GRAMMAR_TAG)
-            raise InvalidGrammarError(msg.format(url, reason))
-
         # libxml2's RELAX NG validator does not implement <except>, so we can't
         # validate with the RELAX NG schema which permits foreign
         # elements/attributes. We can validate against the schema provided in
@@ -202,8 +202,10 @@ class Inliner(object):
         # we have to manually strip foreign elements from a copy of the XML and
         # validate that...
 
-        stripped = copy.deepcopy(grammar)
-        self._strip_non_rng(stripped)
+        stripped = self._strip_non_rng(copy.deepcopy(grammar))
+        if stripped is None:
+            reason = "The root element is not a RELAX NG schema element."
+            raise InvalidGrammarError(msg.format(url, reason))
 
         try:
             RELAXNG_SCHEMA.assertValid(stripped)
