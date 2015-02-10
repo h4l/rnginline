@@ -368,8 +368,8 @@ class Inliner(object):
     def _inline_external_ref(self, ref, context):
         url = self._get_href_url(ref)
 
-        grammar = self.inline(self.dereference_url(url, context), context,
-                              trigger_el=ref)
+        grammar = self._inline(self.dereference_url(url, context), context,
+                               trigger_el=ref)
 
         # datatypeLibrary: The datatypeLibrary is not inherited into an
         # included file from its parent (see note 2 in section 4.9 of the
