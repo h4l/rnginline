@@ -45,3 +45,8 @@ class PropagateDatatypeLibraryPostProcess(object):
 
 
 datatypelibrary = PropagateDatatypeLibraryPostProcess()
+
+
+def get_default_postprocessors():
+    # For compatibility with libxml2
+    return [datatypelibrary]

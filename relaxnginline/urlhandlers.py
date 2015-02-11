@@ -115,3 +115,8 @@ class PackageDataUrlHandler(object):
             raise DereferenceError("Unable to dereference url: {}".format(url))
 
         return data
+
+
+def get_default_handlers():
+    return [FilesystemUrlHandler(), PackageDataUrlHandler()]
+

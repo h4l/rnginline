@@ -18,8 +18,8 @@ from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
 from relaxnginline.exceptions import (
     SchemaIncludesSelfError, NoAvailableHandlerError, ParseError,
     InvalidGrammarError)
-from relaxnginline.urlhandlers import (FilesystemUrlHandler,
-                                       PackageDataUrlHandler)
+from relaxnginline.urlhandlers import (
+    FilesystemUrlHandler, PackageDataUrlHandler, get_default_handlers)
 
 
 __version__ = "0.0.0"
@@ -40,6 +40,15 @@ NEEDS_ESCAPE_RE = re.compile("[^{}]"
 
 RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
     pkgutil.get_data("relaxnginline", "relaxng.rng")))
+
+
+def inline(uri_or_element, handlers=get_default_handlers(),
+           postprocessors=postprocess.get_default_postprocessors(),
+           create_validator=True):
+
+    inliner = Inliner(handlers=handlers, postprocessors=postprocessors)
+    return inliner.inline(uri_or_element, create_validator=create_validator)
+
 
 
 def inline_file(path, libxml2_compat=True):
@@ -111,14 +120,9 @@ class InlineContext(object):
 
 
 class Inliner(object):
-    def __init__(self, handlers, postprocessors=[]):
-        self.handlers = handlers
-        self.postprocessors = postprocessors
-
-    @classmethod
-    def with_default_handlers(cls, postprocessors=[]):
-        return Inliner([FilesystemUrlHandler(), PackageDataUrlHandler()],
-                       postprocessors=postprocessors)
+    def __init__(self, handlers=[], postprocessors=[]):
+        self.handlers = list(handlers)
+        self.postprocessors = list(postprocessors)
 
     def postprocess(self, grammar):
         for pp in self.postprocessors:
@@ -216,7 +220,8 @@ class Inliner(object):
     def get_source_url(self, xml):
         return xml.getroottree().docinfo.URL
 
-    def load(self, url):
+    # FIXME: remove this
+    def load(self, url, xmlout=False):
         """
         Load a RELAX NG schema from url and inline the <include>/<externalRef>
         elements.
@@ -225,30 +230,63 @@ class Inliner(object):
         grammar = self.dereference_url(url, context)
         return self.postprocess(self._inline(grammar, context))
 
-    def inline(self, grammar_xml):
+    def inline(self, src=None, etree=None, url=None, path=None,
+               create_validator=True):
         """
-        Inline the <include>/<externalRef> elements in an already loaded
-        RELAX NG schema.
+        Load an XML document containing a RELAX NG schema, recursively loading
+        and inlining any <include>/<externalRef> elements to form a complete
+        schema.
 
-        Warning: If the href attributes in the XML are relative URLs (as they
-        usually are), the XML's URL MUST be handleable by one of this inliner's
-        handlers. If not, the result of joining the relative href URLs with
-        the XML's URLs will not be resolvable by the handlers.
+        URLs in <include>/<externalRef> elements are resolved against the base
+        URL of their containing document, and fetched using one of this
+        Inliner's urlhandlers.
 
-        In other words, this should hold:
-            >>> any(h.can_handle(grammar_xml.getroottree().docinfo.URL)
-                    for h in inliner.handlers)
-            True
-
-        If you're using absolute URLs in your href attributes then you don't
-        need to worry about the root XML's URL.
+        Args:
+            src: The source to load the schema from. Either an lxml.etree
+                Element, a URL or a filesystem path.
+            etree: Explicitly provide an lxml.etree Element as the source
+            url: Explicitly provide a URL as the source
+            path: Explicitly provide a path as the source
+            create_validator: If True, an lxml RelaxNG validator is created
+                from the loaded XML document and returned. If False then the
+                loaded XML is returned.
+        Returns:
+            A lxml.etree.RelaxNG validator from the fully loaded and inlined
+            XML, or the XML itself, depending on the create_validator argument.
+        Raises:
+            A RelaxngInlineError (or subclass) is raised if the schema can't be
+            loaded.
         """
+        arg_count = sum(0 if arg else 1 for arg in [src, etree, url, path])
+        if arg_count != 1:
+            raise ValueError("A single argument must be provided from src, "
+                             "etree, url or path. got {:d}".format(arg_count))
+
+        if src is not None:
+            # lxml.etree Element
+            if etree.iselement(src):
+                etree = src
+            # lxml.etree ElementTree
+            elif hasattr(src, "getroot"):
+                etree = src.getroot()
+            elif isinstance(src, six.string_types):
+
+            else:
+                raise ValueError("Don't know how to use src: {!r}".format(src))
+
         context = InlineContext()
 
         # Assume we have an etree Element
         self.validate_grammar_xml(grammar_xml)
 
         return self.postprocess(self._inline(grammar_xml, context))
+
+    def _looks_like_url(self, string):
+        return all(
+            string.startswith("/") or ":" in string,
+            all(ord(c) < 128 for c in string),
+            " "
+        )
 
     def _inline(self, grammar, context, trigger_el=None):
 
