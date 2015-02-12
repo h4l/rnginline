@@ -270,7 +270,7 @@ class Inliner(object):
             elif hasattr(src, "getroot"):
                 etree = src.getroot()
             elif isinstance(src, six.string_types):
-
+                raise NotImplementedError("boom")
             else:
                 raise ValueError("Don't know how to use src: {!r}".format(src))
 
