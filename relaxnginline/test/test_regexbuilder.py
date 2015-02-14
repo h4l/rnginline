@@ -85,6 +85,8 @@ ts = TestString
 
 @pytest.mark.parametrize("test_case", [
     tc(Literal("foo"), ts("foo"), ~ts("afoo")),
+    tc(Literal("".join(unichr(x) for x in range(256))),
+       "".join(unichr(x) for x in range(256))),
 
     tc(OneOrMore(Literal("a")), ~ts(""), "a", "aa", "aaa", "aaaaaaaaaaaaaaa"),
     tc(ZeroOrMore(Literal("a")), "", "a", "aa", "aaa", "aaaaaaaaaaaaaa"),

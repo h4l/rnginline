@@ -80,14 +80,21 @@ class Sequence(BaseSequence):
 
 
 class Literal(Regex):
+    _reserved_chars = set("\\.^$*+?{}[]|()")
+
     def __init__(self, text):
         self.text = text
 
     def is_singular(self):
         return len(self.text) == 1
 
+    def needs_escape(self, char):
+        return char in self._reserved_chars
+
     def render(self):
-        return re.escape(self.text)
+        return "".join(
+            re.escape(char) if char in self._reserved_chars else char
+            for char in self.text)
 
     @classmethod
     def from_codepoint(cls, code_point):
