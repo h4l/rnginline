@@ -132,7 +132,8 @@ class Set(Regex):
                         for range in set.ranges]
 
     def render(self):
-        contents = "".join(i.render() for i in self.ranges)
+        contents = "".join(i.render(pos == 0)
+                           for pos, i in enumerate(self.ranges))
         return "[{}]".format(contents)
 
     def is_singular(self):
@@ -170,13 +171,26 @@ class SetRange(object):
             return item
         return ord(item)
 
-    # FIXME: Don't escape everything arbitrarily
-    def render(self):
+    def needs_escape(self, char, is_first):
+        # The ^ must be escaped if it's the first char in the set
+        return (is_first and char == "^") or char in "\\]-"
+
+    def render_char(self, code_point, is_first):
+        char = six.unichr(code_point)
+        if self.needs_escape(char, is_first):
+            return re.escape(char)
+        return char
+
+    def render(self, is_first):
+        """
+        Args:
+            is_first: True if this is the first range in the set
+        """
         if self.start == self.end:
-            return re.escape(six.unichr(self.start))
+            return self.render_char(self.start, is_first)
         else:
-            return "{}-{}".format(re.escape(six.unichr(self.start)),
-                                  re.escape(six.unichr(self.end)))
+            return "{}-{}".format(self.render_char(self.start, is_first),
+                                  self.render_char(self.end, False))
 
     def intersects(self, range):
         start, end = range

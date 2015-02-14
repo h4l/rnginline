@@ -90,6 +90,9 @@ ts = TestString
     tc(ZeroOrMore(Literal("a")), "", "a", "aa", "aaa", "aaaaaaaaaaaaaa"),
 
     tc(Set("a", "d", "f"), "a", "d", "f", ~ts("b"), ~ts("e"), ~ts("g")),
+    tc(Set("^"), "^", ~ts("a"), ~ts("")),
+    tc(Set("]"), "]", ~ts("a"), ~ts("")),
+    tc(Set("\\"), "\\", ~ts("a"), ~ts("")),
 
     tc(OneOrMore(Set(("a", "f"))), "abcdef", "fedcba", "aa", "fdf"),
     # Nested Sets
