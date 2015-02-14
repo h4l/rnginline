@@ -14,6 +14,13 @@ class Regex(object):
     def is_singular(self):
         return False
 
+    def is_expansive(self):
+        """
+        If this expression B was placed between expressions A and C,
+        is_expansive() returns True if the meaning of A or C could be changed.
+        """
+        return False
+
     def render_singular(self):
         """
         Render this regex for placement in a context which requires a single
@@ -25,6 +32,15 @@ class Regex(object):
             return rendered
         # Wrap the expressions in an anonymous group to make 1 expression
         return "(?:{})".format(rendered)
+
+    def render_non_expansive(self):
+        """
+        Render this expression, allowing it not to be singular as long as it's
+        not an expansive expression.
+        """
+        if self.is_expansive():
+            return self.render_singular()
+        return self.render()
 
     def __str__(self):
         return self.render()
@@ -58,8 +74,9 @@ class BaseSequence(Regex):
 class Sequence(BaseSequence):
     def render_expression(self, e):
         # In a sequence of expressions, each expression doesn't need to be
-        # singular to maintain its semantics.
-        return e.render()
+        # singular to maintain its semantics, but the expression can't affect
+        # the semantics of its neighbors.
+        return e.render_non_expansive()
 
 
 class Literal(Regex):
@@ -86,6 +103,12 @@ class Literal(Regex):
 class Choice(BaseSequence):
     def get_operator(self):
         return "|"
+
+    def is_expansive(self):
+        # The choice operator is greedy, it includes as much as possible either
+        # side, so if one is present in the expression, it's "expansive" (will
+        # change the meaning of expressions next to it).
+        return not self.is_singular()
 
 
 class Capture(Sequence):
