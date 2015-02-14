@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import re
+import repr
 
 import six
 
@@ -10,11 +11,28 @@ class Regex(object):
     def compile(self):
         return re.compile(self.render())
 
-    def template(self, group=True):
-        return "(?:{})" if group is True else "{}"
+    def is_singular(self):
+        return False
+
+    def render_singular(self):
+        """
+        Render this regex for placement in a context which requires a single
+        expression rather than multiple expressions. e.g. in x? <x> must be
+        a single expression as ? applies to a single expression.
+        """
+        rendered = self.render()
+        if self.is_singular():
+            return rendered
+        # Wrap the expressions in an anonymous group to make 1 expression
+        return "(?:{})".format(rendered)
 
     def __str__(self):
         return self.render()
+
+    def __repr__(self):
+        return "<{} -> ur\"{}\">".format(
+            type(self).__name__,
+            six.text_type(self).encode("raw_unicode_escape"))
 
 
 class BaseSequence(Regex):
@@ -23,33 +41,36 @@ class BaseSequence(Regex):
         assert all(isinstance(e, Regex) for e in expressions), expressions
         self.expressions = expressions
 
-    def get_template(self, group):
-        group = group is True and len(self.expressions) != 1
-        return "(?:{})" if group is True else "{}"
+    def is_singular(self):
+        return len(self.expressions) == 1 and self.expressions[0].is_singular()
 
     def get_operator(self):
         return ""
 
     def render_expression(self, e):
-        return six.text_type(e)
+        return e.render_singular()
 
-    def render(self, group=True):
-        expression = self.get_operator().join(
+    def render(self):
+        return self.get_operator().join(
             self.render_expression(e) for e in self.expressions)
-        return self.get_template(group).format(expression)
 
 
 class Sequence(BaseSequence):
-    pass
-
-
-class Literal(BaseSequence):
-    def __init__(self, text):
-        self.expressions = text
-
     def render_expression(self, e):
-        # Escape each character before inserting into the regex
-        return re.escape(e)
+        # In a sequence of expressions, each expression doesn't need to be
+        # singular to maintain its semantics.
+        return e.render()
+
+
+class Literal(Regex):
+    def __init__(self, text):
+        self.text = text
+
+    def is_singular(self):
+        return len(self.text) == 1
+
+    def render(self):
+        return re.escape(self.text)
 
     @classmethod
     def from_codepoint(cls, code_point):
@@ -68,8 +89,12 @@ class Choice(BaseSequence):
 
 
 class Capture(Sequence):
-    def render(self, group=True):
-        return "({})".format(super(Capture, self).render(group=False))
+    def render(self):
+        return "({})".format(super(Capture, self).render())
+
+    def is_singular(self):
+        # A capture group always renders as a group, so it's always singular
+        return True
 
 
 class Set(Regex):
@@ -83,9 +108,13 @@ class Set(Regex):
                         for set in items if isinstance(set, Set)
                         for range in set.ranges]
 
-    def render(self, group=False):
+    def render(self):
         contents = "".join(i.render() for i in self.ranges)
         return "[{}]".format(contents)
+
+    def is_singular(self):
+        # Sets are always singular (1 expression)
+        return True
 
 
 class SetRange(object):
@@ -112,13 +141,13 @@ class SetRange(object):
         raise ValueError("Don't know how to create a SetItem from: {!r}"
                          .format(item))
 
-
     @staticmethod
     def get_codepoint(item):
         if isinstance(item, int):
             return item
         return ord(item)
 
+    # FIXME: Don't escape everything arbitrarily
     def render(self):
         if self.start == self.end:
             return re.escape(six.unichr(self.start))
@@ -138,8 +167,11 @@ class UnaryOperator(Regex):
         assert isinstance(expression, Regex), expression
         self.expression = expression
 
-    def render(self, group=False):
-        return "{}{}".format(self.expression.render(), self.operator)
+    # Note that instances are not singular by default
+
+    def render(self):
+        # The subexpression must be singular
+        return "{}{}".format(self.expression.render_singular(), self.operator)
 
 
 class Repeat(UnaryOperator):
@@ -198,8 +230,12 @@ class StandAlone(Regex):
     Base class for stand alone expressions like ^, $, \w, etc.
     """
 
-    def render(self, group=False):
+    def render(self):
         return self.representation
+
+    def is_singular(self):
+        # These are always singular as they're stand alone expressions
+        return True
 
 
 class Start(StandAlone):
