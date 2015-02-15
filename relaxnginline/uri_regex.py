@@ -162,3 +162,68 @@ uri = Sequence(scheme, Literal(":"), hier_part,
                Optional(Sequence(Literal("#"), fragment)))
 
 uri_reference = Choice(uri, relative_ref)
+
+
+_rfc_names = {
+    "URI": uri,
+    "hier-part": hier_part,
+    "URI-reference": uri_reference,
+    "absolute-URI": absolute_uri,
+    "relative-ref": relative_ref,
+    "relative-part": relative_part,
+    "scheme": scheme,
+    "authority": authority,
+    "userinfo": userinfo,
+    "host": host,
+    "port": port,
+    "IP-literal": ip_literal,
+    "IPvFuture": ipvfuture,
+    "IPv6address": ipv6address,
+    "h16": h16,
+    "ls32": ls32,
+    "IPv4address": ipv4address,
+    "dec-octet": dec_octet,
+    "reg-name": reg_name,
+    "path": path,
+    "path-abempty": path_abempty,
+    "path-absolute": path_absolute,
+    "path-noscheme": path_noscheme,
+    "path-rootless": path_rootless,
+    "path-empty": path_empty,
+    "segment": segment,
+    "segment-nz": segment_nz,
+    "segment-nz-nc": segment_nz_nc,
+    "pchar": pchar,
+    "query": query,
+    "fragment": fragment,
+    "pct-encoded": pct_encoded,
+    "unreserved": unreserved,
+    "reserved": reserved,
+    "gen-delims": gen_delims,
+    "sub-delims": sub_delims,
+    "HEXDIG": HEXDIG,
+    "ALPHA": ALPHA,
+    "DIGIT": DIGIT
+}
+
+_compiled_rule_cache = {}
+
+
+def get_regex(rule_name):
+    """
+    Get a compiled regex which matches an entire string against the named rule
+    from RFC 3986.
+    """
+    if not rule_name in _compiled_rule_cache:
+        if not rule_name in _rfc_names:
+            raise ValueError("Unknown rule name: {}".format(rule_name))
+        rule = _rfc_names[rule_name]
+        # Need to place the rule between ^ and $ anchors, as the rules can't
+        # include them by default.
+        wrapped = Sequence(Start(), rule, End())
+        _compiled_rule_cache[rule_name] = wrapped.compile()
+    return _compiled_rule_cache[rule_name]
+
+
+__all__ = ["get_regex"] + ([n for (n, v) in locals().items()
+                            if not n.startswith("_") and isinstance(v, Regex)])

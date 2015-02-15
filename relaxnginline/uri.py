@@ -2,6 +2,36 @@ from __future__ import unicode_literals
 
 from six.moves.urllib.parse import urlsplit, SplitResult
 
+from relaxnginline import uri_regex
+
+
+class UriSyntaxError(ValueError):
+    pass
+
+
+def is_uri(text):
+    """
+    Checks if text matches the "URI" grammar rule from RFC 3986.
+
+    Note the URI rule is LESS general than URI-reference - it requires an
+    absolute URI with a scheme.
+    """
+    return _matches_uri_pattern_rule("URI", text)
+
+
+def is_uri_reference(text):
+    """
+    Checks if text matches the "URI-reference" grammar rule from RFC 3986.
+
+    Note that the URI-reference rule is MORE general than URI - it can be
+    a relative path by itself or an absolute URI with scheme.
+    """
+    return _matches_uri_pattern_rule("URI-reference", text)
+
+
+def _matches_uri_pattern_rule(rule, text):
+    return bool(uri_regex.get_regex(rule).match(text))
+
 
 def resolve(base, reference, strict=True):
     """
@@ -13,6 +43,12 @@ def resolve(base, reference, strict=True):
     Note that urllib.urljoin does not work with non-standard schemes (like our
     pypkgdata: scheme) hence this implementation...
     """
+    if not is_uri(base):
+        raise UriSyntaxError("base was not a valid URI: {}".format(base))
+    if not is_uri_reference(reference):
+        raise UriSyntaxError("reference was not a valid URI-reference: {}"
+                             .format(reference))
+
     b, ref = urlsplit(base), urlsplit(reference)
 
     scheme, authority, path, query, fragment = None, None, None, None, None
