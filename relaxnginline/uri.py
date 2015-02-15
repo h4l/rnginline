@@ -83,7 +83,7 @@ def resolve(base, reference, strict=True):
         scheme = b.scheme
     fragment = ref.fragment
 
-    return _recombine(SplitResult(scheme, authority, path, query, fragment))
+    return recombine(SplitResult(scheme, authority, path, query, fragment))
 
 
 def _merge(base, ref_path):
@@ -145,30 +145,31 @@ def _remove_dot_segments(path):
     return "".join(output)
 
 
-def _recombine(spliturl):
+def recombine(spliturl):
     """
     Combine a SplitResult into a URI string.
 
     Implements section 5.3 Component Recomposition.
     """
+    scheme, netloc, path, query, fragment = spliturl
     out = []
 
-    if spliturl.scheme:
-        out.append(spliturl.scheme)
+    if scheme:
+        out.append(scheme)
         out.append(":")
 
-    if spliturl.netloc:
+    if netloc:
         out.append("//")
-        out.append(spliturl.netloc)
+        out.append(netloc)
 
-    out.append(spliturl.path)
+    out.append(path)
 
-    if spliturl.query:
+    if query:
         out.append("?")
-        out.append(spliturl.query)
+        out.append(query)
 
-    if spliturl.fragment:
+    if fragment:
         out.append("#")
-        out.append(spliturl.fragment)
+        out.append(fragment)
 
     return "".join(out)

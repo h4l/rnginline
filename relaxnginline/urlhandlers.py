@@ -59,8 +59,7 @@ def python_package_data_url(package, resource_path):
 
     path = ensure_text(parse.quote(resource_path.encode("utf-8")), "ascii")
 
-    return parse.urlunparse(("pypkgdata", package, path,
-                             None, None, None))
+    return uri.recombine(("pypkgdata", package, path, None, None, None))
 
 
 class FilesystemUrlHandler(object):
@@ -87,7 +86,7 @@ class FilesystemUrlHandler(object):
         except IOError as cause:
             err = DereferenceError(
                 "Unable to dereference file url: {} : {}"
-                .format(url.geturl(), cause))
+                .format(uri.recombine(url), cause))
             six.raise_from(err, cause)
 
 

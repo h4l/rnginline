@@ -148,9 +148,9 @@ class Inliner(object):
         return grammar
 
     def parse_url(self, url):
-        if isinstance(url, parse.ParseResult):
+        if isinstance(url, parse.SplitResult):
             return url
-        return parse.urlparse(url)
+        return parse.urlsplit(url)
 
     def unparse_url(self, url):
         if isinstance(url, parse.ParseResult):
