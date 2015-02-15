@@ -13,9 +13,10 @@ from relaxnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
 
 
 class TestString(object):
-    def __init__(self, string, groups=None, length=None, should_match=True):
+    def __init__(self, string, groups=None, groupdict=None, length=None, should_match=True):
         self.string = string
         self.groups = groups
+        self.groupdict = groupdict
         self.length = length
         self.should_match = should_match
 
@@ -37,6 +38,8 @@ class TestString(object):
             assert match.end() == length, msg
             if self.groups is not None:
                 assert match.groups() == self.groups, msg
+            if self.groupdict is not None:
+                assert match.groupdict() == self.groupdict, msg
         else:
             assert not match or match.end() != length, msg
 
@@ -122,7 +125,13 @@ ts = TestString
        "foobaz", "foobarbaz"),
 
     tc(Optional(Repeat(Literal("x"), min=2, max=4)), "", "xx", "xxx", "xxxx",
-       ~ts("x"))
+       ~ts("x")),
+
+    tc(Sequence(
+        Capture(OneOrMore(Set("a")), name="foo"),
+        Capture(OneOrMore(Set("b")), name="bar")),
+       ts("aaaabb", groupdict=dict(foo="aaaa", bar="bb"))),
+
 ])
 def test_regex_builder_node(test_case):
     test_case.run()

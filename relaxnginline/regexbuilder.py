@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 
 import re
-import repr
 
 import six
 
@@ -119,8 +118,28 @@ class Choice(BaseSequence):
 
 
 class Capture(Sequence):
+    def __init__(self, *expressions, **kwargs):
+        """
+        Create a capturing regex group, optionally with a name.
+        Args:
+            name: If provided, create a named group with this name.
+        """
+        super(Capture, self).__init__(*expressions)
+
+        name = kwargs.pop("name", None)
+        if name is not None and not is_name(name):
+            raise ValueError("Invalid capture group name: {}".format(name))
+        self.name = name
+
+        if kwargs:
+            raise ValueError("Got unexpected kwargs: {}".format(kwargs))
+
     def render(self):
-        return "({})".format(super(Capture, self).render())
+        expressions = super(Capture, self).render()
+
+        if self.name is not None:
+            return "(?P<{}>{})".format(self.name, expressions)
+        return "({})".format(expressions)
 
     def is_singular(self):
         # A capture group always renders as a group, so it's always singular
@@ -290,11 +309,7 @@ class End(StandAlone):
     representation = "$"
 
 
-
-def main():
-    print("URI regex:")
-    print(uri_reference().render())
-
-
-if __name__ == "__main__":
-    main()
+NAME = re.compile(r"^[a-zA-Z_]\w*$")
+def is_name(string):
+    """Returns: True if string is a Python name/identifier."""
+    return bool(NAME.match(string))
