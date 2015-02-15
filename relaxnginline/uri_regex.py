@@ -25,7 +25,7 @@ uri_reference = lambda: Choice(uri(), relative_ref())
 
 #    absolute-URI  = scheme ":" hier-part [ "?" query ]
 absolute_uri = lambda: Sequence(scheme(), Literal(":"), hier_part(),
-                                Optional(Literal("?", query)))
+                                Optional(Sequence(Literal("?"), query())))
 
 #    relative-ref  = relative-part [ "?" query ] [ "#" fragment ]
 relative_ref = lambda: Sequence(relative_part(),
