@@ -138,7 +138,45 @@ from relaxnginline import uri_regex as ur
     tc(ur.host(), "123.123.123.123", "[ffff::]", "[v1.1]", "", "example.com",
        *[~ts(x) for x in ":/?#[]@"]),
 
-    tc(ur.uri(), "foo://bar/a/b/c;d=1?foo=bar#xyz"),
+    tc(ur.userinfo(), "", "-._~!$&'()*+,;=:abc123ABC",
+       *[~ts(x) for x in "/?#[]@"]),
+
+    tc(ur.authority(), "", "foo@bar.baz:123", "bar.baz:123", "foo@bar.baz",
+       "foo@:123", "bar.baz"),
+
+    tc(ur.scheme(), ~ts(""), "A", "abc+foo-bar.baz"),
+
+    tc(ur.relative_part(),
+       "//", "//auth", "///a/b/c", "//auth/a/b/c",
+       "", "/", "a", "a/b/c",
+       # Can't have relative paths which start looking like a scheme
+       ~ts("foo:bar"),
+       # This is ok though
+       "/foo:bar", "a/foo:bar",
+       ~ts("foo?bar"), ~ts("foo#bar")),
+
+    tc(ur.relative_ref(), "foo?bar", "foo#baz", "foo?bar#baz"),
+
+    # Same as relative_part except we can have scheme-like initial segments in
+    # relative paths
+    tc(ur.hier_part(),
+       "//", "//auth", "///a/b/c", "//auth/a/b/c",
+       "", "/", "a", "a/b/c",
+       # CAN have relative paths which start looking like a scheme
+       "foo:bar",
+       "/foo:bar", "a/foo:bar",
+       ~ts("foo?bar"), ~ts("foo#bar")),
+
+    tc(ur.absolute_uri(), ~ts(":foo"), "a:b/c?d", ~ts("a:b/c?d#e")),
+
+    tc(ur.uri(),
+       "foo://bar/a/b/c;d=1?foo=bar#xyz", "scheme:path", "scheme://auth/path",
+       "scheme://auth", "scheme:?query", "scheme:#frag",
+       "scheme:path?query#frag", "scheme://auth/path?query#frag"),
+
+    tc(ur.uri_reference(), "", "a/b", "a/b?q#f", "/a/b", "s://a",
+       "s://", "s:", "//auth/path", "path//a/b",
+       "s:a/b/c")
 ])
 def test_uri_regex(test_case):
     test_case.run()
