@@ -5,12 +5,12 @@ import re
 import collections
 import pkgutil
 import copy
-from os.path import abspath
+import os
 
 from lxml import etree
 import six
 from six.moves.urllib import parse
-from relaxnginline import postprocess, uri
+from relaxnginline import postprocess, uri, urlhandlers
 
 from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
                                      RNG_DEFINE_TAG, RNG_INCLUDE_TAG,
@@ -18,11 +18,11 @@ from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
 from relaxnginline.exceptions import (
     SchemaIncludesSelfError, NoAvailableHandlerError, ParseError,
     InvalidGrammarError)
-from relaxnginline.urlhandlers import (
-    FilesystemUrlHandler, PackageDataUrlHandler, get_default_handlers)
 
 
 __version__ = "0.0.0"
+
+__all__ = ["inline", "Inliner", ]
 
 # Section 5.4 of XLink specifies that chars other than these must be escaped
 # in values of href attrs before using them as URIs:
@@ -37,33 +37,21 @@ NOT_ESCAPED = "".join(chr(x) for x in
 NEEDS_ESCAPE_RE = re.compile("[^{}]"
                              .format(re.escape(NOT_ESCAPED)).encode("ascii"))
 
-
 RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
     pkgutil.get_data("relaxnginline", "relaxng.rng")))
 
+_etree = etree  # maintain access to etree in methods w/ etree param.
 
-def inline(uri_or_element, handlers=get_default_handlers(),
-           postprocessors=postprocess.get_default_postprocessors(),
-           create_validator=True):
+def inline(src=None, etree=None, url=None, path=None, handlers=None,
+           postprocessors=None, create_validator=True, default_base_uri=None,
+           inliner=None):
 
-    inliner = Inliner(handlers=handlers, postprocessors=postprocessors)
-    return inliner.inline(uri_or_element, create_validator=create_validator)
+    inliner_cls = Inliner if inliner is None else inliner
 
-
-
-def inline_file(path, libxml2_compat=True):
-    """
-    Load and inline a RELAX NG schema on the filesystem at the specified path.
-    """
-    postprocessors = []
-    if libxml2_compat is True:
-        # work around libxml2 bug 744146
-        postprocessors.append(postprocess.datatypelibrary)
-
-    url = FilesystemUrlHandler.make_url(abspath(path))
-    inliner = Inliner([FilesystemUrlHandler()], postprocessors=postprocessors)
-
-    return inliner.load(url)
+    inliner_obj = inliner_cls(handlers=handlers, postprocessors=postprocessors,
+                              default_base_uri=default_base_uri)
+    return inliner_obj.inline(src=src, etree=etree, url=url, path=path,
+                              create_validator=create_validator)
 
 
 class InlineContext(object):
@@ -120,9 +108,39 @@ class InlineContext(object):
 
 
 class Inliner(object):
-    def __init__(self, handlers=[], postprocessors=[]):
-        self.handlers = list(handlers)
-        self.postprocessors = list(postprocessors)
+    def __init__(self, handlers=None, postprocessors=None,
+                 default_base_uri=None):
+        self.handlers = list(
+            self.get_default_handlers() if handlers is None else handlers)
+
+        self.postprocessors = list(self.get_default_postprocessors()
+                                   if postprocessors is None else postprocess)
+
+        if default_base_uri is None:
+            self.default_base_uri = self.get_default_default_base_uri()
+        else:
+            if not uri.is_uri(default_base_uri):
+                raise ValueError("default_base_uri is not a valid URI: {}"
+                                 .format(default_base_uri))
+            self.default_base_uri = default_base_uri
+
+    # Yes, this is the default's default.
+    def get_default_default_base_uri(self):
+        """
+        Get the URI to use as the default_base_uri if none is provided.
+        """
+        dir = os.getcwd()
+        # Directory URLs need to end with a slash, otherwise the last path
+        # segment will be dropped wen resolve()ing.
+        if not dir.endswith("/"):
+            dir = dir + "/"
+        return urlhandlers.file_url(dir)
+
+    def get_default_postprocessors(self):
+        return postprocess.get_default_postprocessors()
+
+    def get_default_handlers(self):
+        return urlhandlers.get_default_handlers()
 
     def postprocess(self, grammar):
         for pp in self.postprocessors:
@@ -147,9 +165,6 @@ class Inliner(object):
         except StopIteration:
             raise NoAvailableHandlerError(
                 "No handler can handle url: {}".format(url))
-
-    def resolve_url(self, base, url):
-        return uri.resolve(base, url)
 
     def dereference_url(self, url, context):
         if context.has_been_dereferenced(url):
@@ -220,15 +235,14 @@ class Inliner(object):
     def get_source_url(self, xml):
         return xml.getroottree().docinfo.URL
 
-    # FIXME: remove this
-    def load(self, url, xmlout=False):
-        """
-        Load a RELAX NG schema from url and inline the <include>/<externalRef>
-        elements.
-        """
-        context = InlineContext()
-        grammar = self.dereference_url(url, context)
-        return self.postprocess(self._inline(grammar, context))
+    def create_validator(self, schema):
+        # This should not fail under normal circumstances as we've validated
+        # our input RELAX NG schemas. However, if the libxml2 compat is
+        # disabled and a buggy libxml2 version is used then this could fail.
+        # It seems inappropriate to catch and rethrow such an error as our own,
+        # as it's lxml (via libxml2)'s problem and the user will have
+        # explicitly disabled our workaround to protect them from it.
+        return etree.RelaxNG(schema)
 
     def inline(self, src=None, etree=None, url=None, path=None,
                create_validator=True):
@@ -257,39 +271,64 @@ class Inliner(object):
             A RelaxngInlineError (or subclass) is raised if the schema can't be
             loaded.
         """
-        arg_count = sum(0 if arg else 1 for arg in [src, etree, url, path])
+        arg_count = sum(1 if arg else 0 for arg in [src, etree, url, path])
         if arg_count != 1:
             raise ValueError("A single argument must be provided from src, "
                              "etree, url or path. got {:d}".format(arg_count))
 
         if src is not None:
             # lxml.etree Element
-            if etree.iselement(src):
+            if _etree.iselement(src):
                 etree = src
             # lxml.etree ElementTree
             elif hasattr(src, "getroot"):
                 etree = src.getroot()
             elif isinstance(src, six.string_types):
-                raise NotImplementedError("boom")
+                if uri.is_uri_reference(src):
+                    url = src
+                else:
+                    path = src
             else:
                 raise ValueError("Don't know how to use src: {!r}".format(src))
 
+        grammar_provided_directly = etree is not None
+
+        if path is not None:
+            assert url is None and etree is None
+            url = urlhandlers.file_url(path)
+
         context = InlineContext()
 
-        # Assume we have an etree Element
-        self.validate_grammar_xml(grammar_xml)
+        if url is not None:
+            assert etree is None
+            if not uri.is_uri_reference(url):
+                raise ValueError("url was not a valid URL-reference: {}"
+                                 .format(url))
+            # IMPORTANT: resolving the input URL against the default base URI
+            # is what allows the url to be a relative URI like foo/bar.rng
+            # and still get handled by the filesystem handler, which requires
+            # a file: URI scheme. Note also that if url is already absolute
+            # with its own scheme then the default base is ignored in the
+            # resolution process.
+            absolute_url = uri.resolve(self.default_base_uri, url)
+            etree = self.dereference_url(absolute_url, context)
 
-        return self.postprocess(self._inline(grammar_xml, context))
+        assert etree is not None
 
-    def _looks_like_url(self, string):
-        return all(
-            string.startswith("/") or ":" in string,
-            all(ord(c) < 128 for c in string),
-            " "
-        )
+        if grammar_provided_directly:
+            # The XML to inline was directly provided, so we'll need to
+            # validate it:
+            self.validate_grammar_xml(etree)
+            # Note that we don't need to validate that the element has a base
+            # URI, as if it only includes absolute URLs it's not needed.
+
+        schema = self.postprocess(self._inline(etree, context))
+
+        if create_validator is True:
+            return self.create_validator(schema)
+        return schema
 
     def _inline(self, grammar, context, trigger_el=None):
-
         # Track the URLs we're inlining from to detect cycles
         with context.track(self.get_source_url(grammar), trigger_el):
             # Find include/externalRefs and (recursively) inline them
@@ -432,6 +471,10 @@ class Inliner(object):
 
         ref.getparent().replace(ref, grammar)
 
+    def _get_base_uri(self, el):
+        base = "" if el.base is None else el.base
+        return uri.resolve(self.default_base_uri, base)
+
     def _get_href_url(self, el):
         if "href" not in el.attrib:
             raise InvalidGrammarError.from_bad_element(
@@ -449,13 +492,13 @@ class Inliner(object):
         #       IRIs for href values. Consider supporting these.
         url = escape_reserved_characters(href)
 
-        base_url = el.base
-        # The base url will always be set, as we require it to be present in
-        # inline() and when parsing XML strings.
-        assert base_url, (el, el.base)
+        base = self._get_base_uri(el)
+        # The base url will always be set, as even if the element has no base,
+        # we have a default base URI.
+        assert uri.is_uri(base), (el, el.base)
 
         # make the href absolute against the element's base url
-        return self.resolve_url(el.base, url)
+        return uri.resolve(base, url)
 
 
 def _escape_match(match):

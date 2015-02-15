@@ -9,6 +9,7 @@ from six.moves.urllib import parse
 from six.moves.urllib.request import pathname2url, url2pathname
 
 from relaxnginline.exceptions import DereferenceError
+from relaxnginline import uri
 
 
 # Python package pattern
@@ -29,17 +30,12 @@ def xlink_url_decode(part):
     return ensure_text(parse.unquote(part), "utf-8")
 
 
-def file_url(file_path):
+def file_url(file_path, base="file:"):
     """
-    Create a file:// URL pointing to file_path.
-
-    file_path must be an absolute path.
+    Create a file:// URL pointing to the filesystem path file_path.
     """
-    if not os.path.isabs(file_path):
-        raise ValueError("file_path is not absolute: {}".format(file_path))
-
     path = ensure_text(pathname2url(file_path.encode("utf-8")), "ascii")
-    return parse.urljoin("file://", path)
+    return uri.resolve(base, path)
 
 
 def python_package_data_url(package, resource_path):
