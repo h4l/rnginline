@@ -1,0 +1,6 @@
+This file contains some data which will be loaded by the test_urlhandlers.py
+file to test the PackageDataUrlHandler.
+
+It's got some non-ascii characters in the filename and also here:
+                                                     ʇxǝʇ ᴉᴉɔsɐ-uou uʍop ǝpᴉsdn
+BTW, this file is encoded in UTF-8.

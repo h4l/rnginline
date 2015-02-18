@@ -18,6 +18,13 @@ def test_urllib_urljoin_does_not_work_for_us():
     assert (uri.resolve("custom://a/b/c/foo.txt", "bar.txt")
             == "custom://a/b/c/bar.txt")  # What I'd expect
 
+
+def test_urllib_parsing_is_not_that_great():
+    assert urllib.parse.unquote("f%69le:///foo") == "file:///foo"
+    assert urllib.parse.urlsplit("f%69le:///foo") == (
+        "", "", "f%69le:///foo", "", "")  # WTF...
+
+
 # Test here are from RFC 3986 section 5.4:
 # http://tools.ietf.org/html/rfc3986#section-5.4
 
@@ -85,3 +92,11 @@ def test_resolve(base, reference, target):
 ])
 def test_strict_resolve(base, reference, target, strict):
     assert uri.resolve(base, reference, strict=strict) == target
+
+
+def test_recombine_rejects_relative_paths_with_netloc():
+    with pytest.raises(uri.UriSyntaxError):
+        # This would produce "foorel/path" if an error was not raised.
+        # We could do what urllib does and insert a leading /, but this doesn't
+        # sit well with PEP 20 IMO.
+        uri.recombine(("", "foo", "rel/path", "", ""))

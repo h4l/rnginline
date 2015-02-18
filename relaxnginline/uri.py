@@ -154,6 +154,12 @@ def recombine(spliturl):
     scheme, netloc, path, query, fragment = spliturl
     out = []
 
+    # Refuse to construct a broken URI-reference
+    if netloc and path and not path.startswith("/"):
+        raise UriSyntaxError(
+            "With a netloc present the path must be absolute or empty. "
+            "path: {}".format(path))
+
     if scheme:
         out.append(scheme)
         out.append(":")
