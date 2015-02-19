@@ -131,10 +131,10 @@ class Inliner(object):
         """
         dir = os.getcwd()
         # Directory URLs need to end with a slash, otherwise the last path
-        # segment will be dropped wen resolve()ing.
+        # segment will be dropped when resolve()ing.
         if not dir.endswith("/"):
             dir = dir + "/"
-        return urlhandlers.file_url(dir)
+        return urlhandlers.construct_file_url(dir)
 
     def get_default_postprocessors(self):
         return postprocess.get_default_postprocessors()
@@ -151,11 +151,6 @@ class Inliner(object):
         if isinstance(url, parse.SplitResult):
             return url
         return parse.urlsplit(url)
-
-    def unparse_url(self, url):
-        if isinstance(url, parse.ParseResult):
-            return url.geturl()
-        return url
 
     def get_handler(self,  url):
         parsed_url = self.parse_url(url)
@@ -296,7 +291,7 @@ class Inliner(object):
 
         if path is not None:
             assert url is None and etree is None
-            url = urlhandlers.file_url(path)
+            url = urlhandlers.deconstruct_file_url(path)
 
         context = InlineContext()
 
