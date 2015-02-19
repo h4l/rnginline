@@ -1,0 +1,6 @@
+<foo xmlns="example">
+    <bar/>
+    <baz xmlns="other"/>
+    <baz/>
+    <boz/>
+</foo>
