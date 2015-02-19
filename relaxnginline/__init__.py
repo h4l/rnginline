@@ -34,7 +34,7 @@ NOT_ESCAPED = "".join(chr(x) for x in
                       # And not these reserved chars
                       - set(ord(c) for c in " <>\"{}|\\^`"))
 # Matches chars which must be escaped in href attrs
-NEEDS_ESCAPE_RE = re.compile("[^{}]"
+NEEDS_ESCAPE_RE = re.compile("[^{0}]"
                              .format(re.escape(NOT_ESCAPED)).encode("ascii"))
 
 RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
@@ -89,7 +89,7 @@ class InlineContext(object):
         head = self.url_context_stack.pop()
         if head[:2] != (url, token):
             raise ValueError("Context stack head is different from expectation"
-                             ". expected: {}, actual: {}"
+                             ". expected: {0}, actual: {1}"
                              .format((url, token), head[:2]))
 
     def track(self, url, trigger_el=None):
@@ -120,7 +120,7 @@ class Inliner(object):
             self.default_base_uri = self.get_default_default_base_uri()
         else:
             if not uri.is_uri(default_base_uri):
-                raise ValueError("default_base_uri is not a valid URI: {}"
+                raise ValueError("default_base_uri is not a valid URI: {0}"
                                  .format(default_base_uri))
             self.default_base_uri = default_base_uri
 
@@ -164,7 +164,7 @@ class Inliner(object):
             return next(handlers)
         except StopIteration:
             raise NoAvailableHandlerError(
-                "No handler can handle url: {}".format(url))
+                "No handler can handle url: {0}".format(url))
 
     def dereference_url(self, url, context):
         if context.has_been_dereferenced(url):
@@ -178,8 +178,8 @@ class Inliner(object):
         try:
             xml = etree.fromstring(xml_string, base_url=base_url)
         except etree.ParseError as cause:
-            err = ParseError("Unable to parse result of dereferencing url: {}."
-                             " error: {}".format(base_url, cause))
+            err = ParseError("Unable to parse result of dereferencing "
+                             "url: {0}. error: {1}".format(base_url, cause))
             six.raise_from(err, cause)
 
         assert xml.base == base_url
@@ -211,8 +211,8 @@ class Inliner(object):
         Checks that grammar is an XML document matching the RELAX NG schema.
         """
         url = self.get_source_url(grammar) or "??"
-        msg = ("The XML document from url: {} was not a valid RELAX NG schema:"
-               " {}")
+        msg = ("The XML document from url: {0} was not a valid RELAX NG "
+               "schema: {1}")
 
         # libxml2's RELAX NG validator does not implement <except>, so we can't
         # validate with the RELAX NG schema which permits foreign
@@ -274,7 +274,7 @@ class Inliner(object):
         arg_count = sum(1 if arg else 0 for arg in [src, etree, url, path])
         if arg_count != 1:
             raise ValueError("A single argument must be provided from src, "
-                             "etree, url or path. got {:d}".format(arg_count))
+                             "etree, url or path. got {0:d}".format(arg_count))
 
         if src is not None:
             # lxml.etree Element
@@ -289,7 +289,8 @@ class Inliner(object):
                 else:
                     path = src
             else:
-                raise ValueError("Don't know how to use src: {!r}".format(src))
+                raise ValueError(
+                    "Don't know how to use src: {0!r}".format(src))
 
         grammar_provided_directly = etree is not None
 
@@ -302,7 +303,7 @@ class Inliner(object):
         if url is not None:
             assert etree is None
             if not uri.is_uri_reference(url):
-                raise ValueError("url was not a valid URL-reference: {}"
+                raise ValueError("url was not a valid URL-reference: {0}"
                                  .format(url))
             # IMPORTANT: resolving the input URL against the default base URI
             # is what allows the url to be a relative URI like foo/bar.rng
@@ -392,7 +393,7 @@ class Inliner(object):
             overridden = defines[name]
             if len(overridden) == 0:
                 raise InvalidGrammarError.from_bad_element(
-                    els[0], "Included grammar contains no define(s) named {} "
+                    els[0], "Included grammar contains no define(s) named {0} "
                             "to replace.".format(name))
             self._remove_all(overridden)
 
@@ -505,7 +506,7 @@ def _escape_match(match):
     char = match.group()
     assert len(char) == 1
     assert isinstance(char, six.binary_type)
-    return "%{:X}".format(ord(char)).encode("ascii")
+    return "%{0:X}".format(ord(char)).encode("ascii")
 
 
 def escape_reserved_characters(url):

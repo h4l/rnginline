@@ -10,7 +10,7 @@ def get_version(filename):
     version_pattern = r"^ *__version__ *= *['\"](\d+\.\d+\.\d+)['\"] *$"
     match = re.search(version_pattern, open(filename).read(), re.MULTILINE)
 
-    assert match, ("No version found in file: {!r} matching pattern: {!r}"
+    assert match, ("No version found in file: {0!r} matching pattern: {1!r}"
                    .format(filename, version_pattern))
 
     return match.group(1)

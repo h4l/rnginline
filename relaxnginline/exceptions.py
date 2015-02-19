@@ -24,7 +24,7 @@ class DereferenceError(RelaxngInlineError):
 class InvalidGrammarError(BadXmlError):
     @classmethod
     def from_bad_element(cls, el, msg):
-        return cls("{} on line {} {}"
+        return cls("{0} on line {1} {2}"
                    .format(el.tag, el.sourceline or "??", msg))
 
 
@@ -37,12 +37,12 @@ class SchemaIncludesSelfError(InvalidGrammarError, DereferenceError):
         loop = "".join(cls._format_url_trigger(u, t)
                        for (u, t) in url_triggers)
 
-        return cls("A schema referenced itself, creating a loop:\n{}"
+        return cls("A schema referenced itself, creating a loop:\n{0}"
                    .format(loop))
 
     @classmethod
     def _format_url_trigger(cls, url, trigger_el):
         if trigger_el is None:
             return url
-        return ":{} <{}> -> \n{}".format(
+        return ":{0} <{1}> -> \n{2}".format(
             trigger_el.sourceline, etree.QName(trigger_el).localname, url)

@@ -30,7 +30,7 @@ class Regex(object):
         if self.is_singular():
             return rendered
         # Wrap the expressions in an anonymous group to make 1 expression
-        return "(?:{})".format(rendered)
+        return "(?:{0})".format(rendered)
 
     def render_non_expansive(self):
         """
@@ -45,7 +45,7 @@ class Regex(object):
         return self.render()
 
     def __repr__(self):
-        return "<{} -> ur\"{}\">".format(
+        return "<{0} -> ur\"{1}\">".format(
             type(self).__name__,
             six.text_type(self).encode("raw_unicode_escape"))
 
@@ -103,7 +103,7 @@ class Literal(Regex):
         this will create (and match) surrogate pairs for code points above the
         BMP.
         """
-        return cls("\\U{:08X}".format(code_point).decode("unicode_escape"))
+        return cls("\\U{0:08X}".format(code_point).decode("unicode_escape"))
 
 
 class Choice(BaseSequence):
@@ -128,18 +128,18 @@ class Capture(Sequence):
 
         name = kwargs.pop("name", None)
         if name is not None and not is_name(name):
-            raise ValueError("Invalid capture group name: {}".format(name))
+            raise ValueError("Invalid capture group name: {0}".format(name))
         self.name = name
 
         if kwargs:
-            raise ValueError("Got unexpected kwargs: {}".format(kwargs))
+            raise ValueError("Got unexpected kwargs: {0}".format(kwargs))
 
     def render(self):
         expressions = super(Capture, self).render()
 
         if self.name is not None:
-            return "(?P<{}>{})".format(self.name, expressions)
-        return "({})".format(expressions)
+            return "(?P<{0}>{1})".format(self.name, expressions)
+        return "({0})".format(expressions)
 
     def is_singular(self):
         # A capture group always renders as a group, so it's always singular
@@ -160,7 +160,7 @@ class Set(Regex):
     def render(self):
         contents = "".join(i.render(pos == 0)
                            for pos, i in enumerate(self.ranges))
-        return "[{}]".format(contents)
+        return "[{0}]".format(contents)
 
     def is_singular(self):
         # Sets are always singular (1 expression)
@@ -170,7 +170,7 @@ class Set(Regex):
 class SetRange(object):
     def __init__(self, start, end):
         if end < start:
-            raise ValueError("end < start. start: {}, end: {}"
+            raise ValueError("end < start. start: {0}, end: {1}"
                              .format(start, end))
         self.start = start
         self.end = end
@@ -188,7 +188,7 @@ class SetRange(object):
         if len(item) == 2:
             start, end = item
             return SetRange(cls.get_codepoint(start), cls.get_codepoint(end))
-        raise ValueError("Don't know how to create a SetItem from: {!r}"
+        raise ValueError("Don't know how to create a SetItem from: {0!r}"
                          .format(item))
 
     @staticmethod
@@ -215,8 +215,8 @@ class SetRange(object):
         if self.start == self.end:
             return self.render_char(self.start, is_first)
         else:
-            return "{}-{}".format(self.render_char(self.start, is_first),
-                                  self.render_char(self.end, False))
+            return "{0}-{1}".format(self.render_char(self.start, is_first),
+                                    self.render_char(self.end, False))
 
     def intersects(self, range):
         start, end = range
@@ -234,7 +234,8 @@ class UnaryOperator(Regex):
 
     def render(self):
         # The subexpression must be singular
-        return "{}{}".format(self.expression.render_singular(), self.operator)
+        return "{0}{1}".format(
+            self.expression.render_singular(), self.operator)
 
 
 class Repeat(UnaryOperator):
@@ -264,13 +265,13 @@ class Repeat(UnaryOperator):
         elif self.min == 0 and self.max == 1:
             return "?"
         elif self.min == self.max:
-            return "{{{:d}}}".format(self.min)
+            return "{{{0:d}}}".format(self.min)
         elif self.min is None:
-            return "{{,{:d}}}".format(self.max)
+            return "{{,{0:d}}}".format(self.max)
         elif self.max is None:
-            return "{{{:d},}}".format(self.min)
+            return "{{{0:d},}}".format(self.min)
         else:
-            return "{{{:d},{:d}}}".format(self.min, self.max)
+            return "{{{0:d},{1:d}}}".format(self.min, self.max)
 
 
 class ZeroOrMore(Repeat):

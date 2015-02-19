@@ -216,7 +216,7 @@ def get_regex(rule_name):
     """
     if not rule_name in _compiled_rule_cache:
         if not rule_name in _rfc_names:
-            raise ValueError("Unknown rule name: {}".format(rule_name))
+            raise ValueError("Unknown rule name: {0}".format(rule_name))
         rule = _rfc_names[rule_name]
         # Need to place the rule between ^ and $ anchors, as the rules can't
         # include them by default.

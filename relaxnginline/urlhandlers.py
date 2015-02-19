@@ -22,7 +22,7 @@ def reject_bytes(**kwargs):
     for name, value in kwargs.items():
         if isinstance(value, six.binary_type):
             raise ValueError(
-                "Use {} for {}, not {}. got: {!r}"
+                "Use {0} for {1}, not {2}. got: {3!r}"
                 .format(six.text_type.__name__, name, six.binary_type.__name__,
                         value))
 
@@ -93,7 +93,7 @@ def deconstruct_file_url(file_url):
     scheme, _, path, _, _ = url
 
     if scheme != "file":
-        raise ValueError("Expected a file: URL, got: {}"
+        raise ValueError("Expected a file: URL, got: {0}"
                          .format(uri.recombine(url)))
 
     return unquote(ensure_parsed(file_url).path, unquoting_func=url2pathname)
@@ -101,7 +101,7 @@ def deconstruct_file_url(file_url):
 
 def _validate_py_pkg_name(package):
     if not PACKAGE.match(package):
-        raise ValueError("package is not a valid Python package name: {}"
+        raise ValueError("package is not a valid Python package name: {0}"
                          .format(package))
 
 
@@ -120,7 +120,7 @@ def construct_py_pkg_data_url(package, resource_path):
     _validate_py_pkg_name(package)
 
     if resource_path.startswith("/"):
-        raise ValueError("resource_path must not start with a slash: {}"
+        raise ValueError("resource_path must not start with a slash: {0}"
                          .format(resource_path))
 
     path = quote("/" + resource_path)
@@ -133,7 +133,7 @@ def deconstruct_py_pkg_data_url(url):
     scheme, package, path, _, _ = url
 
     if scheme != "pypkgdata":
-        raise ValueError("Not a pypkgdata: URL: {}".format(url.geturl()))
+        raise ValueError("Not a pypkgdata: URL: {0}".format(url.geturl()))
 
     package = unquote(package)
     path = unquote(path)
@@ -165,7 +165,7 @@ class FilesystemUrlHandler(object):
                 return f.read()
         except IOError as cause:
             err = DereferenceError(
-                "Unable to dereference file url: {} : {}"
+                "Unable to dereference file url: {0} : {1}"
                 .format(uri.recombine(url), cause))
             six.raise_from(err, cause)
 
@@ -183,7 +183,7 @@ class PackageDataUrlHandler(object):
         data = pkgutil.get_data(package, pkg_path)
 
         if data is None:
-            raise DereferenceError("Unable to dereference url: {}"
+            raise DereferenceError("Unable to dereference url: {0}"
                                    .format(uri.recombine(url)))
 
         return data

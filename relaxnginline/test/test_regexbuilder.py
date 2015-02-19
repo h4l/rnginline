@@ -44,7 +44,7 @@ class TestString(object):
             assert not match or match.end() != length, msg
 
     def __repr__(self):
-        return ("{}({!r}, groups={!r}, length={!r}, should_match={!r})"
+        return ("{0}({1!r}, groups={2!r}, length={3!r}, should_match={4!r})"
                 .format(type(self), self.string, self.groups, self.length,
                         self.should_match))
 
@@ -79,7 +79,8 @@ class TestCase(object):
         if self.test_strings:
             test_strings = ", " + ", ".join(
                 repr(ts) for ts in self.test_strings)
-        return "{}({!r}{})".format(type(self).__name__, self.node, test_strings)
+        return "{0}({1!r}{2})".format(
+            type(self).__name__, self.node, test_strings)
 
 
 tc = TestCase

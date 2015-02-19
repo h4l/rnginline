@@ -44,9 +44,9 @@ def resolve(base, reference, strict=True):
     pypkgdata: scheme) hence this implementation...
     """
     if not is_uri(base):
-        raise UriSyntaxError("base was not a valid URI: {}".format(base))
+        raise UriSyntaxError("base was not a valid URI: {0}".format(base))
     if not is_uri_reference(reference):
-        raise UriSyntaxError("reference was not a valid URI-reference: {}"
+        raise UriSyntaxError("reference was not a valid URI-reference: {0}"
                              .format(reference))
 
     b, ref = urlsplit(base), urlsplit(reference)
@@ -158,7 +158,7 @@ def recombine(spliturl):
     if netloc and path and not path.startswith("/"):
         raise UriSyntaxError(
             "With a netloc present the path must be absolute or empty. "
-            "path: {}".format(path))
+            "path: {0}".format(path))
 
     if scheme:
         out.append(scheme)

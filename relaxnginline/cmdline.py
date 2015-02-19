@@ -73,7 +73,7 @@ def parse_stdin():
     try:
         xml = etree.parse(stdin, base_url=None)
     except etree.ParseError as cause:
-            err = ParseError("Unable to parse <stdin> as XML. error: {}"
+            err = ParseError("Unable to parse <stdin> as XML. error: {0}"
                              .format(cause))
             six.raise_from(err, cause)
     assert xml.base is None
@@ -99,7 +99,7 @@ def _main(args):
         # user-provided.
         if not uri.is_uri(default_base_uri):
             raise RelaxngInlineError(
-                "The --default-base-uri provided is not a valid URI: {}"
+                "The --default-base-uri provided is not a valid URI: {0}"
                 .format(default_base_uri))
 
     postprocessors = None  # defaults
@@ -117,7 +117,7 @@ def main():
     try:
         _main(args)
     except RelaxngInlineError as e:
-        print("fatal: {}".format(e), file=sys.stderr)
+        print("fatal: {0}".format(e), file=sys.stderr)
 
         if args["--traceback"]:
             import traceback
