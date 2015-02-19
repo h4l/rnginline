@@ -60,7 +60,7 @@ from relaxnginline.exceptions import ParseError, RelaxngInlineError
 def py2_decode_bytes(cmdline_argument):
     # Python 2 provides command line args as bytes rather than text
     if six.PY2:
-        assert isinstance(cmdline_argument, six.binary_type), (cmdline_argument, type(cmdline_argument))
+        assert isinstance(cmdline_argument, six.binary_type)
         encoding = locale.getdefaultlocale()[1] or "ascii"
         return cmdline_argument.decode(encoding)
 
@@ -86,14 +86,14 @@ def _main(args):
     else:
         src = py2_decode_bytes(args["<rng-src>"])
 
-    outfile = args["<rng-output>"]
+    outfile = py2_decode_bytes(args["<rng-output>"])
 
     if outfile is None or outfile == "-":
         outfile = sys.stdin.buffer if six.PY3 else sys.stdout
 
     default_base_uri = None
     if args["--default-base-uri"]:
-        default_base_uri = args["--default-base-uri"]
+        default_base_uri = py2_decode_bytes(args["--default-base-uri"])
         # Need to validate this here, as it's considered a coding error to pass
         # an invalid URI to Inliner as default_base_uri, but this URI is
         # user-provided.
