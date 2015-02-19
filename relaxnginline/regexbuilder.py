@@ -249,8 +249,8 @@ class Repeat(UnaryOperator):
         assert min is None or min >= 0
         assert max is None or max >= 0
         assert ((min is None and max is None) or
-                min <= max or
-                (min is None or max is None)), (min, max)
+                (min is None or max is None) or
+                min <= max), (min, max)
 
         self.min = min
         self.max = max
