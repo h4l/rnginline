@@ -116,7 +116,8 @@ def construct_py_pkg_data_url(package, resource_path):
 
     The URL can be handled by PackageDataUrlHandler, using pkgutil.get_data().
     """
-    reject_bytes(package=package, resource_path=resource_path)
+    # Python 2 uses bytes for __name__, so no point in rejecting non-text...
+    reject_bytes(resource_path=resource_path)
     _validate_py_pkg_name(package)
 
     if resource_path.startswith("/"):

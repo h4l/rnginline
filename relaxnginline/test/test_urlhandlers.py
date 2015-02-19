@@ -80,6 +80,12 @@ def test_pypkgdata_uri_creation():
     assert deconstruct_py_pkg_data_url(created_url) == (package, path)
 
 
+def test_pypkgdata_uri_creation_allows_package_as_bytes():
+    # On py2 __name__ is a byte string, so it makes sense to accept bytes for
+    # the package
+    construct_py_pkg_data_url("foo".encode("ascii"), "bar.txt")
+
+
 def test_pypkgdata_handler_handles_pypkgdata_uris():
     handler = PackageDataUrlHandler()
     assert handler.can_handle(parse.urlsplit(data_data_data_uri))
