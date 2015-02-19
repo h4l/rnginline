@@ -27,5 +27,8 @@ setup(
         "console_scripts": [
             "relaxnginline = relaxnginline.cmdline:main"
         ]
+    },
+    package_data={
+        "relaxnginline": ["relaxng.rng"]
     }
 )
