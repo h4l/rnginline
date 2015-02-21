@@ -59,9 +59,10 @@ class InlineContext(object):
     Maintains state through an inlining operation to prevent infinite loops,
     and allow each unique URL to be dereferenced only once.
     """
-    def __init__(self, dereferenced_urls={}, stack=[]):
-        self.dereferenced_urls = dereferenced_urls
-        self.url_context_stack = stack
+    def __init__(self, dereferenced_urls=None, stack=None):
+        self.dereferenced_urls = (
+            {} if dereferenced_urls is None else dereferenced_urls)
+        self.url_context_stack = [] if stack is None else stack
 
     def has_been_dereferenced(self, url):
         return url in self.dereferenced_urls
