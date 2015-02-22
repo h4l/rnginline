@@ -10,6 +10,7 @@ import pkg_resources as pr  # setuptools, but only used in tests
 import relaxnginline
 from relaxnginline import DeferredXmlInsertion
 from relaxnginline.urlhandlers import construct_py_pkg_data_url
+from relaxnginline.exceptions import InvalidGrammarError
 
 
 TESTPKG = "relaxnginline.test"
@@ -55,6 +56,24 @@ def _load_testcases():
 ])
 def test_escape_reserved(href_text, encoded_url):
     assert relaxnginline.escape_reserved_characters(href_text) == encoded_url
+
+
+def test_include_cant_inline_non_grammar_elements():
+    """
+    Verify that <include>s can't pull in a RNG file that doesn't start with a
+    <grammar>.
+    """
+    illegal_url = construct_py_pkg_data_url(
+        TESTPKG, "data/inline-non-grammar-els/illegal.rng")
+
+    with pytest.raises(InvalidGrammarError):
+        relaxnginline.inline(url=illegal_url)
+
+    legal_url = construct_py_pkg_data_url(
+        TESTPKG, "data/inline-non-grammar-els/legal.rng")
+    schema = relaxnginline.inline(url=legal_url)
+
+    assert schema(etree.XML("<foo/>"))
 
 
 def _testcase_id(tc):

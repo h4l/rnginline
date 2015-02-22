@@ -1,0 +1,4 @@
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <!-- Can't include a non-grammar el -->
+    <include href="foo-el.rng"/>
+</grammar>
