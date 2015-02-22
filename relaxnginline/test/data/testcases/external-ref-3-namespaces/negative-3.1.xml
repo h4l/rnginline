@@ -1,0 +1,7 @@
+<ns-tests xmlns="x:/example">
+    <c>
+        <!-- x:/foo-a shouldn't clobber x:/foo-b -->
+        <test-3-a xmlns="x:/foo-a"/>
+        <test-3-b xmlns="x:/foo-a"/>
+    </c>
+</ns-tests>

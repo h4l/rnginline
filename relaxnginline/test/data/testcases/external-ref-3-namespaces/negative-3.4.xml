@@ -1,0 +1,7 @@
+<ns-tests xmlns="x:/example">
+    <c>
+        <!-- test-3-* should be in their own ns -->
+        <test-3-a xmlns=""/>
+        <test-3-b xmlns=""/>
+    </c>
+</ns-tests>

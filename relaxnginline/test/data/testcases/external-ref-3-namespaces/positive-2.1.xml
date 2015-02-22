@@ -1,0 +1,5 @@
+<ns-tests xmlns="x:/example">
+    <b>
+        <test-2 xmlns="x:/2-ns-in-ns-attr"/>
+    </b>
+</ns-tests>

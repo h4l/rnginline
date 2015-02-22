@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The foo ns prefix here is bound to x:/foo-b, different to the binding
+     for foo: in schema.rng. -->
+<rng:element xmlns:rng="http://relaxng.org/ns/structure/1.0"
+             xmlns:foo="x:/foo-b"
+             name="foo:test-3-b">
+    <rng:empty/>
+</rng:element>

@@ -1,0 +1,6 @@
+<ns-tests xmlns="x:/example">
+    <b>
+        <!-- test-2 has a non-empty ns -->
+        <test-2 xmlns=""/>
+    </b>
+</ns-tests>

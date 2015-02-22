@@ -1,0 +1,6 @@
+<ns-tests xmlns="x:/example">
+    <a>
+        <!-- Wrong ns: -->
+        <test-1 xmlns="x:/1-default-ns"/>
+    </a>
+</ns-tests>

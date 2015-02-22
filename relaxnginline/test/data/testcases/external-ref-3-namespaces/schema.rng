@@ -2,11 +2,22 @@
 <grammar ns="x:/example" xmlns="http://relaxng.org/ns/structure/1.0">
     <start>
         <element name="ns-tests">
-            <oneOrMore>
+            <zeroOrMore>
                 <element name="a">
                     <externalRef href="1-default-xmlns-unprefixed-names.rng"/>
                 </element>
-            </oneOrMore>
+            </zeroOrMore>
+            <zeroOrMore>
+                <element name="b">
+                    <externalRef href="2-ns-attributes.rng"/>
+                </element>
+            </zeroOrMore>
+            <zeroOrMore>
+                <element name="c" xmlns:foo="x:/foo-a">
+                    <element name="foo:test-3-a"><empty/></element>
+                    <externalRef href="3-qnames.rng"/>
+                </element>
+            </zeroOrMore>
         </element>
     </start>
 </grammar>

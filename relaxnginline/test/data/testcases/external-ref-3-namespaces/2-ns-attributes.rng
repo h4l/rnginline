@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The ns attr here overrides the one in schema.rng -->
+<rng:element xmlns:rng="http://relaxng.org/ns/structure/1.0"
+             ns="x:/2-ns-in-ns-attr"
+             name="test-2">
+    <rng:empty/>
+</rng:element>

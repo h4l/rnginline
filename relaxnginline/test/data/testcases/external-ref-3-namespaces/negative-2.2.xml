@@ -1,0 +1,6 @@
+<ns-tests xmlns="x:/example">
+    <b>
+        <!-- Wrong ns (test-2 has its own, doesn't inherit). -->
+        <test-2/>
+    </b>
+</ns-tests>
