@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rng:element ns="example" name="this" xmlns:rng="http://relaxng.org/ns/structure/1.0">
+    <rng:text/>
+</rng:element>

@@ -1,0 +1,7 @@
+default namespace = "example"
+
+start = element foo {
+    element bar { text },
+    external "baz.rnc" +,
+    element boz { text }
+}

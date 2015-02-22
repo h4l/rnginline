@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <define name="foo">
+        <element name="foo">
+            <text/>
+        </element>
+    </define>
+
+    <define name="bar">
+        <element name="bar">
+            <text/>
+        </element>
+    </define>
+</grammar>

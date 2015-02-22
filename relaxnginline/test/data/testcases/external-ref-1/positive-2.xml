@@ -1,0 +1,7 @@
+<foo xmlns="example">
+    <bar>123</bar>
+    <baz>abc</baz>
+    <baz></baz>
+    <baz>asdfsaf</baz>
+    <boz/>
+</foo>

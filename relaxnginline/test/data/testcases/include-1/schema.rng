@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <include href="included.rng"/>
+
+    <start>
+        <choice>
+            <ref name="foo"/>
+            <ref name="bar"/>
+        </choice>
+    </start>
+</grammar>

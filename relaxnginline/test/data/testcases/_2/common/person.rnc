@@ -1,0 +1,6 @@
+default namespace = "example.com/person"
+
+start = element person {
+    element name { text },
+    element favorite-colour { "red" | "green" | "blue" }
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <start>
+        <element name="foo">
+            <element name="bar">
+                <text/>
+            </element>
+            <oneOrMore>
+                <externalRef href="baz.rng"/>
+            </oneOrMore>
+            <element name="boz">
+                <text/>
+            </element>
+        </element>
+    </start>
+</grammar>

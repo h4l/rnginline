@@ -1,0 +1,8 @@
+
+
+start = element book {
+    element title { text },
+    element authors {
+        external "person.rnc"
+    }+
+}

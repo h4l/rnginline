@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="x:/example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <start>
+        <element name="ns-tests">
+            <oneOrMore>
+                <element name="a">
+                    <externalRef href="1-default-xmlns-unprefixed-names.rng"/>
+                </element>
+            </oneOrMore>
+        </element>
+    </start>
+</grammar>

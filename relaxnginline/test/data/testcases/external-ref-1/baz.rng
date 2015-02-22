@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <element name="baz" xmlns="http://relaxng.org/ns/structure/1.0">
-  <text/>
+    <text/>
 </element>

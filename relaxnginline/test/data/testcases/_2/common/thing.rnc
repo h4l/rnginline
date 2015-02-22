@@ -1,0 +1,8 @@
+start = thing
+thing = element thing {
+    thing.content
+}
+
+thing.content = {
+
+}

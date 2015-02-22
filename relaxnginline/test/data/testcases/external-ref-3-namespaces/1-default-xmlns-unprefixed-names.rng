@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Note that the default namespace will have no effect on the namespace of
+     the element test-1. It will inherit the including file's namespace. -->
+<rng:element xmlns:rng="http://relaxng.org/ns/structure/1.0"
+             xmlns="x:/1-default-ns"
+             name="test-1">
+    <rng:empty/>
+</rng:element>

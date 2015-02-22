@@ -1,0 +1,5 @@
+<ns-tests xmlns="x:/example">
+    <a>
+        <test-1/>
+    </a>
+</ns-tests>

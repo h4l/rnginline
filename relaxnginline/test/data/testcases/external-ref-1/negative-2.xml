@@ -1,0 +1,5 @@
+<foo xmlns="example">
+    <bar/>
+    <!-- <baz> missing entirely -->
+    <boz/>
+</foo>
