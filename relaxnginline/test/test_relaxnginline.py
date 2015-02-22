@@ -33,7 +33,10 @@ def _load_testcases():
         assert not [f for files in [[schema], positive_cases, negative_cases]
                     for f in files if not pr.resource_exists(__name__, f)]
 
-        testcases.append((schema, positive_cases, negative_cases))
+        for file in positive_cases:
+            testcases.append((schema, file, True))
+        for file in negative_cases:
+            testcases.append((schema, file, False))
 
     assert testcases
     return testcases
@@ -51,29 +54,40 @@ def _load_testcases():
     ("/foo/bar%20baz.txt", "/foo/bar%20baz.txt")
 ])
 def test_escape_reserved(href_text, encoded_url):
-    assert escape_reserved_characters(href_text) == encoded_url
+    assert relaxnginline.escape_reserved_characters(href_text) == encoded_url
 
 
+def _testcase_id(tc):
+    prefix = "data/testcases/"
+    schema, file, should_match = tc
+
+    assert schema.startswith(prefix)
+    assert file.startswith(prefix)
+
+    return "{},{},{}".format(schema[len(prefix):], file[len(prefix):],
+                             should_match)
+
+
+test_testcases_testcases = _load_testcases()
 @pytest.mark.parametrize(
-    "schema_file,matching_files,unmatching_files", _load_testcases())
-def test_testcases(schema_file, matching_files, unmatching_files):
-
+    "schema_file,test_file,should_match", test_testcases_testcases,
+    ids=map(_testcase_id, test_testcases_testcases))
+def test_testcases(schema_file, test_file, should_match):
     schema = relaxnginline.inline(
         construct_py_pkg_data_url(TESTPKG, schema_file))
 
-    for file in matching_files:
-        good_xml = etree.parse(pr.resource_stream(TESTPKG, file))
+    xml = etree.parse(pr.resource_stream(TESTPKG, test_file))
+
+    if should_match:
         try:
             # Should match
-            schema.assertValid(good_xml)
+            schema.assertValid(xml)
         except etree.DocumentInvalid as e:
             pytest.fail("{} should match {} but didn't: {}"
-                        .format(file, schema_file, schema.error_log))
-
-    for file in unmatching_files:
-        bad_xml = etree.parse(pr.resource_stream(TESTPKG, file))
+                        .format(test_file, schema_file, schema.error_log))
+    else:
         with pytest.raises(etree.DocumentInvalid):
             # Shouldn't match
-            schema.assertValid(bad_xml)
+            schema.assertValid(xml)
             pytest.fail("{} shouldn't match {} but did"
-                        .format(file, schema_file))
+                        .format(test_file, schema_file))
