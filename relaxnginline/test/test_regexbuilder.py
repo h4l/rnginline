@@ -12,7 +12,7 @@ from relaxnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
                                         Optional, Start, End)
 
 
-class TestString(object):
+class _TestString(object):
     def __init__(self, string, groups=None, groupdict=None, length=None, should_match=True):
         self.string = string
         self.groups = groups
@@ -49,7 +49,7 @@ class TestString(object):
                         self.should_match))
 
 
-class TestCase(object):
+class _TestCase(object):
     def __init__(self, node, *test_strings, **kwargs):
         if len(test_strings) == 0:
             raise ValueError("no test strings provided")
@@ -64,7 +64,7 @@ class TestCase(object):
         else:
             self.node = node
         self.test_strings = [
-            TestString(ts) if isinstance(ts, six.text_type) else ts
+            _TestString(ts) if isinstance(ts, six.text_type) else ts
             for ts in test_strings
         ]
 
@@ -83,8 +83,8 @@ class TestCase(object):
             type(self).__name__, self.node, test_strings)
 
 
-tc = TestCase
-ts = TestString
+tc = _TestCase
+ts = _TestString
 
 
 @pytest.mark.parametrize("test_case", [

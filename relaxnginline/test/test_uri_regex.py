@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import pytest
 
 from relaxnginline.test.test_regexbuilder import (
-    TestCase as tc, TestString as ts)
+    _TestCase as tc, _TestString as ts)
 from relaxnginline import uri_regex as ur
 
 
