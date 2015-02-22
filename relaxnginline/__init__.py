@@ -320,34 +320,45 @@ class Inliner(object):
             # Note that we don't need to validate that the element has a base
             # URI, as if it only includes absolute URLs it's not needed.
 
-        schema = self.postprocess(self._inline(etree, context))
+        dxi = self._inline(etree, context)
+        inlined = dxi.perform_insertions()
+        schema = self.postprocess(inlined)
 
         if create_validator is True:
             return self.create_validator(schema)
         return schema
 
     def _inline(self, grammar, context, trigger_el=None):
+        dxi = DeferredXmlInsertion(grammar)
+
         # Track the URLs we're inlining from to detect cycles
         with context.track(self.get_source_url(grammar), trigger_el):
             # Find include/externalRefs and (recursively) inline them
-            grammar = self._inline_includes(grammar, context)
-            grammar = self._inline_external_refs(grammar, context)
+            self._inline_includes(dxi, grammar, context)
+            self._inline_external_refs(dxi, grammar, context)
 
-        return grammar
+        return dxi
 
-    def _inline_includes(self, grammar, context):
+    def _inline_includes(self, dxi, grammar, context):
+        assert dxi.get_root_el() == grammar
         includes = grammar.xpath("//rng:include", namespaces=NSMAP)
 
         for include in includes:
-            self._inline_include(include, context)
+            self._inline_include(dxi, include, context)
 
-        return grammar
-
-    def _inline_include(self, include, context):
+    def _inline_include(self, dxi, include, context):
         url = self._get_href_url(include)
 
-        grammar = self._inline(self.dereference_url(url, context), context,
+        grammar_dxi = self._inline(self.dereference_url(url, context), context,
                                trigger_el=include)
+        grammar = grammar_dxi.get_root_el()
+
+        # The included grammar's root element must be a grammar (unlike
+        # externalRef, which can be any pattern).
+        if grammar.tag != RNG_GRAMMAR_TAG:
+            raise InvalidGrammarError.from_bad_element(
+                include, "referenced a RELAX NG schema which doesn't start "
+                         "with a grammar element.")
 
         # To process an include the RNG spec (4.7) says we need to:
         # - recursively process includes in included grammar
@@ -368,8 +379,13 @@ class Inliner(object):
         include.tag = RNG_DIV_TAG
         del include.attrib["href"]
 
-        include.insert(0, grammar)
+        # TODO: Changing the tag doesn't seem to cause lxml to change ns
+        # prefixes, but should probably do more testing to verify.
         grammar.tag = RNG_DIV_TAG
+
+        # The grammar_dxi holds the pending merges for the grammar we're
+        # inlining.
+        dxi.register_insert(include, 0, grammar_dxi)
 
     def _remove_overridden_components(self, include, grammar):
         override_starts, override_defines = self._grouped_components(include)
@@ -432,19 +448,19 @@ class Inliner(object):
             for components in self._components(div):
                 yield component
 
-    def _inline_external_refs(self, grammar, context):
+    def _inline_external_refs(self, dxi, grammar, context):
+        assert dxi.get_root_el() == grammar
         refs = grammar.xpath("//rng:externalRef", namespaces=NSMAP)
 
         for ref in refs:
-            self._inline_external_ref(ref, context)
+            self._inline_external_ref(dxi, ref, context)
 
-        return grammar
-
-    def _inline_external_ref(self, ref, context):
+    def _inline_external_ref(self, dxi, ref, context):
         url = self._get_href_url(ref)
 
-        grammar = self._inline(self.dereference_url(url, context), context,
+        grammar_dxi = self._inline(self.dereference_url(url, context), context,
                                trigger_el=ref)
+        grammar = grammar_dxi.get_root_el()
 
         # datatypeLibrary: The datatypeLibrary is not inherited into an
         # included file from its parent (see note 2 in section 4.9 of the
@@ -467,7 +483,7 @@ class Inliner(object):
         if "ns" in ref.attrib and "ns" not in grammar.attrib:
             grammar.attrib["ns"] = ref.attrib["ns"]
 
-        ref.getparent().replace(ref, grammar)
+        dxi.register_replace(ref, grammar_dxi)
 
     def _get_base_uri(self, el):
         base = "" if el.base is None else el.base
@@ -530,6 +546,9 @@ class DeferredXmlInsertion(object):
         self.root_el = root_el
         self.pending_insertions = []
         self.insertions_performed = False
+
+    def get_root_el(self):
+        return self.root_el
 
     def register_insert(self, parent, index, el):
         children = list(parent)
