@@ -499,126 +499,145 @@ class Inliner(object):
         return uri.resolve(base, url)
 
 
-def _lxml_replace_retain_ns_prefixes(old_el, new_el):
+# Sigh...
+class DeferredXmlInsertion(object):
     """
-    Replace el with replacement. This works like:
-        el.parent.replace(el, replacement)
-    except care is taken to maintain whatever namespaces prefixes are defined
-    in the replacement element tree.
+    A ridiculous hack to merge together lxml XML trees while preserving the
+    namespace prefixes used in the tree being merged in.
+
+    When using parent.replace(child, new_el) or parent.insert(0, new_el),
+    lxml tries to simplify the namespaces defined in new_el, which can result
+    in the defined namespace prefixes changing. e.g. if new_el has
+    xmlns:foo="bar" and "bar" is already defined higher up the tree, the
+    mapping from the foo prefix -> bar may be removed. For most applications
+    this doesn't matter, but QName attribute values in RELAX NG documents
+    depend on the defined ns prefixes in their context, so this behaviour has
+    the potential to break RELAX NG documents.
+    See: http://relaxng.org/spec-20011203.html#IDA4CZR
+
+    So, namespace prefixes are not maintained if we construct trees in code.
+    They ARE maintained when parsing a serialised document. So, we can
+    maintain our ns prefixes by serialising both trees, joining them together
+    and parsing the result. Absolutely stupid, but there doesn't seem to be
+    any other way to do this with lxml. To make this more efficient, this class
+    supports batching up the merges, so we only have to perform the dump and
+    parse once for any given XML element in the tree.
     """
-    prev = old_el.getprevious()
-    insert_after = True
+    def __init__(self, root_el):
+        assert etree.iselement(root_el)
+        # root_el is the root el of its tree
+        assert root_el.getroottree().getroot() == root_el
+        self.root_el = root_el
+        self.pending_insertions = []
+        self.insertions_performed = False
 
-    if prev is None:
-        prev = old_el.getparent()
-        insert_after = False
-
-    if prev is None:
-        # Nothing to maintain in el, el must be the root.
-        return new_el, new_el
-
-    # We guarantee the
-    return _STUPID_HACK_lxml_insert_subtree_maintaining_ns_prefixes(
-        prev, insert_after, new_el
-    )
-
-
-def _lxml_insert_retain_ns_prefixes(parent, index, el):
-    children = list(parent)
-    if len(children) == 0:
-        target = parent
-        insert_after = False
-    elif index >= len(parent):
-        target = children[-1]
-        insert_after = True
-    else:
-        el_at_pos = children[index]
-        target = el_at_pos.getprevious()
-        insert_after = True
-
-        if target is None:
+    def register_insert(self, parent, index, el):
+        children = list(parent)
+        if len(children) == 0:
             target = parent
             insert_after = False
+        elif index >= len(parent):
+            target = children[-1]
+            insert_after = True
+        else:
+            el_at_pos = children[index]
+            target = el_at_pos.getprevious()
+            insert_after = True
 
-    return _STUPID_HACK_lxml_insert_subtree_maintaining_ns_prefixes(
-        target, insert_after, el
-    )
+            if target is None:
+                target = parent
+                insert_after = False
 
+        self._register_insertion(target, insert_after, el)
 
-# FIXME: Need a version of this which does bulk inserts of target_el, el pairs
-# to make _inline_*s, efficient.
-def _STUPID_HACK_lxml_insert_subtree_maintaining_ns_prefixes(target_el,
-                                                             insert_after, el):
-    """
-    By default, lxml will not honor the names pkeep the nsmap of replacement,
-    which could break RELAX NG QName references.
+    def register_replace(self, old_el, new_el):
+        """
+        Replace old_el with new_el. This works like:
+            el.parent.replace(el, replacement)
+        except care is taken to maintain whatever namespaces prefixes are
+        defined in the new_eltree.
 
-    Note that as the function name suggests, this has to be implemented in a
-    ridiculous way, because lxml does not give control over the the namespace
-    prefixes used when an element is inserted as a child of another element in
-    Python code. It aims to maintain a single prefix for any given namespace
-    throughout the tree. I can see that this is fine for the vast majority of
-    use cases, but handling/creating RELAX NG schemas requires exact control
-    over the namespace prefixes used, because QNames in attribute values depend
-    on the namespace prefix in the context of their element to resolve the
-    QName correctly. See: http://relaxng.org/spec-20011203.html#IDA4CZR
+        Note that old_el is removed immediately, but new_el is not merged in
+        until perform_insertions() is called.
+        """
+        prev = old_el.getprevious()
+        insert_after = True
 
-    Args:
-        target_el: The element which marks the position to insert el into
-        insert_after: If True, el will end up immediately after tail text
-            of target_el (outside the tag). If False, el will end up after the
-            text inside target_el (before any existing children).
-        el: The element to insert
-    Returns: A tuple of (root, el) Where root is the new XML root, and el is
-        the inserted el in the root tree. Note that root will not be the same
-        as target_el.getroottree().getroot() because the tree has to be
-        regenerated to maintain the ns prefixes. :@
-    """
-    # Sigh...
-    # So, namespace prefixes are not maintained if we construct trees in code.
-    # They ARE maintained when parsing a serialised document. So, we can
-    # maintain our ns prefixes by serialising both trees, joining them together
-    # and parsing the result. Absolutely stupid, but there doesn't seem to be
-    # any other way to do this with lxml.
+        if prev is None:
+            prev = old_el.getparent()
+            insert_after = False
 
-    assert target_el.getroottree().getroot() != el.getroottree().getroot()
+        if prev is None:
+            # Nothing to maintain in old_el's tree, old_el must be the root.
+            assert self.root_el == old_el
+            raise ValueError("Can't register the root_el for replacement")
 
-    # We need a way to find the insertion point in the serialised tree. A UUID
-    # provides us with a string which is all but guaranteed not to exist in
-    # the target
-    marker = uuid.uuid4().hex
-    # Need a _ as a leading digit is not a valid NCName
-    el_attrib_marker = "_" + marker
+        # Remove old_el immediately, and register the insertion
+        self._register_insertion(prev, insert_after, new_el)
+        old_el.getparent().remove(old_el)
 
-    if insert_after:
-        target_el.tail = (target_el.tail or "") + marker
-    else:
-        target_el.text = (target_el.text or "") + marker
+    def _register_insertion(self, target_el, insert_after, el):
+        """
+        Register an element to be inserted into this object's root_el. The
+        insertion is not performed immediately, but at a later time.
 
-    # Need to also mark the el so that we can locate it after reloading the
-    # tree.
-    el.attrib[el_attrib_marker] = ""
+        Args:
+            target_el: The element which marks the position to insert el into
+            insert_after: If True, el will end up immediately after tail text
+                of target_el (outside the tag). If False, el will end up after
+                the text inside target_el (before any existing children).
+            el: The element to insert. Can be an etree Element or a
+                DeferredXmlInsertion instance.
+        """
+        # We need a way to find the insertion point in the serialised tree. A
+        # UUID provides us with a string which is all but guaranteed not to
+        # exist in the root_el tree.
+        marker = uuid.uuid4().hex
 
-    root_xml = etree.tostring(target_el.getroottree().getroot(),
-                              encoding="unicode")
+        if insert_after:
+            target_el.tail = (target_el.tail or "") + marker
+        else:
+            target_el.text = (target_el.text or "") + marker
 
-    el_xml = etree.tostring(el, encoding="unicode")
+        # Record the marker against the el for later bulk insertion
+        self.pending_insertions.append((marker, el))
 
-    merged_xml = root_xml.replace(marker, el_xml, 1)
+    def _prevent_repeated_insertions(self):
+        if self.insertions_performed is not False:
+            raise AssertionError(
+                "insertions have already performed")
+        self.insertions_performed = True
 
-    # There has to be a match
-    assert root_xml is not merged_xml
+    def perform_insertions(self):
+        if len(self.pending_insertions) == 0:
+            self._prevent_repeated_insertions()
+            return self.root_el
 
-    # Parse the merged string, maintaining the base URL of the previous doc
-    new_root = etree.fromstring(merged_xml,
-                                base_url=target_el.getroottree().docinfo.URL)
+        mergex_xml = self._perform_insertions_internal()
 
-    # Locate the new version of el
-    new_el, = new_root.xpath("//*[@{0}]".format(el_attrib_marker))
-    del new_el.attrib[el_attrib_marker]
+        # Parse the merged string, maintaining the base URL of the previous doc
+        return etree.fromstring(
+            mergex_xml, base_url=self.root_el.getroottree().docinfo.URL)
 
-    return new_root, new_el
+    def _get_xml_string(self, el):
+        if isinstance(el, DeferredXmlInsertion):
+            return el._perform_insertions_internal()
+        return etree.tostring(el, encoding="unicode")
 
+    def _perform_insertions_internal(self):
+        self._prevent_repeated_insertions()
+
+        root_xml = etree.tostring(self.root_el, encoding="unicode")
+
+        for marker, el in self.pending_insertions:
+            el_xml = self._get_xml_string(el)
+            merged_xml = root_xml.replace(marker, el_xml, 1)
+
+            # There has to be a match
+            assert root_xml is not merged_xml
+            root_xml = merged_xml
+
+        return root_xml
 
 def _escape_match(match):
     char = match.group()

@@ -8,8 +8,7 @@ import pytest
 import pkg_resources as pr  # setuptools, but only used in tests
 
 import relaxnginline
-from relaxnginline import _lxml_replace_retain_ns_prefixes, \
-    _lxml_insert_retain_ns_prefixes
+from relaxnginline import DeferredXmlInsertion
 from relaxnginline.urlhandlers import construct_py_pkg_data_url
 
 
@@ -113,7 +112,7 @@ def test_lxml_doesnt_honor_namespace_prefixes():
     assert d.prefix is None
 
 
-def test_stupid_hack_to_make_lxml_honor_prefixes__replace():
+def test_deferred_xml_insertion__replace():
     a = etree.XML("""<a xmlns="foo" xmlns:f1="foo"><f1:b/></a>""")
     b = list(a)[0]
     c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
@@ -123,16 +122,19 @@ def test_stupid_hack_to_make_lxml_honor_prefixes__replace():
     assert c.prefix == "f2"
     assert d.prefix == "f3"
 
-    new_a, new_c = _lxml_replace_retain_ns_prefixes(b, c)
+    dxi = DeferredXmlInsertion(a)
+    dxi.register_replace(b, c)
+    new_a = dxi.perform_insertions()
+    new_c = list(new_a)[0]
     new_d = list(new_c)[0]
 
     # They're now in the same root element
     assert new_a.getroottree().getroot() == new_c.getroottree().getroot()
 
     # The prefixes are not nuked though
-    assert new_a.prefix is None
-    assert new_c.prefix == "f2"
-    assert new_d.prefix == "f3"
+    assert new_a.prefix is None and new_a.tag == "{foo}a"
+    assert new_c.prefix == "f2" and new_c.tag == "{foo}c"
+    assert new_d.prefix == "f3" and new_d.tag == "{foo}d"
 
 
 @pytest.mark.parametrize("xml,index,expected", [
@@ -149,7 +151,7 @@ def test_stupid_hack_to_make_lxml_honor_prefixes__replace():
     ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", 3, 3),
     ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", 5, 3)
 ])
-def test_stupid_hack_to_make_lxml_honor_prefixes__insert(xml, index, expected):
+def test_deferred_xml_insertion__insert(xml, index, expected):
     a = etree.XML(xml)
     c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
     d = list(c)[0]
@@ -158,8 +160,11 @@ def test_stupid_hack_to_make_lxml_honor_prefixes__insert(xml, index, expected):
     assert c.prefix == "f2"
     assert d.prefix == "f3"
 
-    new_a, new_c = _lxml_insert_retain_ns_prefixes(a, index, c)
-    new_d = list(c)[0]
+    dxi = DeferredXmlInsertion(a)
+    dxi.register_insert(a, index, c)
+    new_a = dxi.perform_insertions()
+    new_c = new_a.find("{foo}c")
+    new_d = list(new_c)[0]
 
     assert new_a.prefix is None
     assert new_c.prefix == "f2"
