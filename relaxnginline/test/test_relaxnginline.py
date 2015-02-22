@@ -76,6 +76,21 @@ def test_include_cant_inline_non_grammar_elements():
     assert schema(etree.XML("<foo/>"))
 
 
+@pytest.mark.parametrize("schema_path", [
+    "data/datatype-library-inheritance/base-included.rng",
+    "data/datatype-library-inheritance/base-external.rng"
+])
+def test_inlined_files_dont_inherit_datatype(schema_path):
+    illegal_url = construct_py_pkg_data_url(TESTPKG, schema_path)
+
+    # Inlining will succeed
+    grammar = relaxnginline.inline(url=illegal_url, create_validator=False)
+
+    # But constructing a validator from the grammar XML will fail
+    with pytest.raises(etree.RelaxNGError):
+        etree.RelaxNG(grammar)
+
+
 def _testcase_id(tc):
     prefix = "data/testcases/"
     schema, file, should_match = tc

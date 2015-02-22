@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- datatypeLibrary is not inherited, so this file is invalid and should
+     trigger an error when loaded after inlining. -->
+<element name="foo" xmlns="http://relaxng.org/ns/structure/1.0">
+    <data type="double"/>
+</element>

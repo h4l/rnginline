@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <start>
+        <!-- datatypeLibrary is not inherited, so this file is invalid and should
+         trigger an error when loaded after inlining. -->
+        <element name="a">
+            <data type="double"/>
+        </element>
+    </start>
+</grammar>
