@@ -6,6 +6,7 @@ import collections
 import pkgutil
 import copy
 import os
+import uuid
 
 from lxml import etree
 import six
@@ -496,6 +497,127 @@ class Inliner(object):
 
         # make the href absolute against the element's base url
         return uri.resolve(base, url)
+
+
+def _lxml_replace_retain_ns_prefixes(old_el, new_el):
+    """
+    Replace el with replacement. This works like:
+        el.parent.replace(el, replacement)
+    except care is taken to maintain whatever namespaces prefixes are defined
+    in the replacement element tree.
+    """
+    prev = old_el.getprevious()
+    insert_after = True
+
+    if prev is None:
+        prev = old_el.getparent()
+        insert_after = False
+
+    if prev is None:
+        # Nothing to maintain in el, el must be the root.
+        return new_el, new_el
+
+    # We guarantee the
+    return _STUPID_HACK_lxml_insert_subtree_maintaining_ns_prefixes(
+        prev, insert_after, new_el
+    )
+
+
+def _lxml_insert_retain_ns_prefixes(parent, index, el):
+    children = list(parent)
+    if len(children) == 0:
+        target = parent
+        insert_after = False
+    elif index >= len(parent):
+        target = children[-1]
+        insert_after = True
+    else:
+        el_at_pos = children[index]
+        target = el_at_pos.getprevious()
+        insert_after = True
+
+        if target is None:
+            target = parent
+            insert_after = False
+
+    return _STUPID_HACK_lxml_insert_subtree_maintaining_ns_prefixes(
+        target, insert_after, el
+    )
+
+
+# FIXME: Need a version of this which does bulk inserts of target_el, el pairs
+# to make _inline_*s, efficient.
+def _STUPID_HACK_lxml_insert_subtree_maintaining_ns_prefixes(target_el,
+                                                             insert_after, el):
+    """
+    By default, lxml will not honor the names pkeep the nsmap of replacement,
+    which could break RELAX NG QName references.
+
+    Note that as the function name suggests, this has to be implemented in a
+    ridiculous way, because lxml does not give control over the the namespace
+    prefixes used when an element is inserted as a child of another element in
+    Python code. It aims to maintain a single prefix for any given namespace
+    throughout the tree. I can see that this is fine for the vast majority of
+    use cases, but handling/creating RELAX NG schemas requires exact control
+    over the namespace prefixes used, because QNames in attribute values depend
+    on the namespace prefix in the context of their element to resolve the
+    QName correctly. See: http://relaxng.org/spec-20011203.html#IDA4CZR
+
+    Args:
+        target_el: The element which marks the position to insert el into
+        insert_after: If True, el will end up immediately after tail text
+            of target_el (outside the tag). If False, el will end up after the
+            text inside target_el (before any existing children).
+        el: The element to insert
+    Returns: A tuple of (root, el) Where root is the new XML root, and el is
+        the inserted el in the root tree. Note that root will not be the same
+        as target_el.getroottree().getroot() because the tree has to be
+        regenerated to maintain the ns prefixes. :@
+    """
+    # Sigh...
+    # So, namespace prefixes are not maintained if we construct trees in code.
+    # They ARE maintained when parsing a serialised document. So, we can
+    # maintain our ns prefixes by serialising both trees, joining them together
+    # and parsing the result. Absolutely stupid, but there doesn't seem to be
+    # any other way to do this with lxml.
+
+    assert target_el.getroottree().getroot() != el.getroottree().getroot()
+
+    # We need a way to find the insertion point in the serialised tree. A UUID
+    # provides us with a string which is all but guaranteed not to exist in
+    # the target
+    marker = uuid.uuid4().hex
+    # Need a _ as a leading digit is not a valid NCName
+    el_attrib_marker = "_" + marker
+
+    if insert_after:
+        target_el.tail = (target_el.tail or "") + marker
+    else:
+        target_el.text = (target_el.text or "") + marker
+
+    # Need to also mark the el so that we can locate it after reloading the
+    # tree.
+    el.attrib[el_attrib_marker] = ""
+
+    root_xml = etree.tostring(target_el.getroottree().getroot(),
+                              encoding="unicode")
+
+    el_xml = etree.tostring(el, encoding="unicode")
+
+    merged_xml = root_xml.replace(marker, el_xml, 1)
+
+    # There has to be a match
+    assert root_xml is not merged_xml
+
+    # Parse the merged string, maintaining the base URL of the previous doc
+    new_root = etree.fromstring(merged_xml,
+                                base_url=target_el.getroottree().docinfo.URL)
+
+    # Locate the new version of el
+    new_el, = new_root.xpath("//*[@{0}]".format(el_attrib_marker))
+    del new_el.attrib[el_attrib_marker]
+
+    return new_root, new_el
 
 
 def _escape_match(match):

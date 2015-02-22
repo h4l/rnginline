@@ -7,8 +7,9 @@ from lxml import etree
 import pytest
 import pkg_resources as pr  # setuptools, but only used in tests
 
-from relaxnginline import escape_reserved_characters, uri
 import relaxnginline
+from relaxnginline import _lxml_replace_retain_ns_prefixes, \
+    _lxml_insert_retain_ns_prefixes
 from relaxnginline.urlhandlers import construct_py_pkg_data_url
 
 
@@ -91,3 +92,77 @@ def test_testcases(schema_file, test_file, should_match):
             schema.assertValid(xml)
             pytest.fail("{} shouldn't match {} but did"
                         .format(test_file, schema_file))
+
+
+def test_lxml_doesnt_honor_namespace_prefixes():
+    a = etree.XML("""<a xmlns="foo" xmlns:f1="foo"><f1:b/></a>""")
+    b = list(a)[0]
+    c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
+    d = list(c)[0]
+
+    assert a.prefix is None
+    assert b.prefix == "f1"
+    assert c.prefix == "f2"
+    assert d.prefix == "f3"
+
+    # Now merge them, we'll lose the prefixes
+    b.insert(0, c)
+    assert a.prefix is None
+    assert b.prefix == "f1"  # This won't change as we've not reinserted it
+    assert c.prefix is None  # These get nuked though
+    assert d.prefix is None
+
+
+def test_stupid_hack_to_make_lxml_honor_prefixes__replace():
+    a = etree.XML("""<a xmlns="foo" xmlns:f1="foo"><f1:b/></a>""")
+    b = list(a)[0]
+    c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
+    d = list(c)[0]
+
+    assert a.prefix is None
+    assert c.prefix == "f2"
+    assert d.prefix == "f3"
+
+    new_a, new_c = _lxml_replace_retain_ns_prefixes(b, c)
+    new_d = list(new_c)[0]
+
+    # They're now in the same root element
+    assert new_a.getroottree().getroot() == new_c.getroottree().getroot()
+
+    # The prefixes are not nuked though
+    assert new_a.prefix is None
+    assert new_c.prefix == "f2"
+    assert new_d.prefix == "f3"
+
+
+@pytest.mark.parametrize("xml,index,expected", [
+    ("""<a xmlns="foo" xmlns:f1="foo"/>""", 0, 0),
+    ("""<a xmlns="foo" xmlns:f1="foo"/>""", -2, 0),
+    ("""<a xmlns="foo" xmlns:f1="foo"/>""", 2, 0),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/></a>""", 0, 0),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/></a>""", 1, 1),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/></a>""", 4, 1),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/></a>""", -1, 0),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", -1, 2),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", -2, 1),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", -3, 0),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", 3, 3),
+    ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", 5, 3)
+])
+def test_stupid_hack_to_make_lxml_honor_prefixes__insert(xml, index, expected):
+    a = etree.XML(xml)
+    c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
+    d = list(c)[0]
+
+    assert a.prefix is None
+    assert c.prefix == "f2"
+    assert d.prefix == "f3"
+
+    new_a, new_c = _lxml_insert_retain_ns_prefixes(a, index, c)
+    new_d = list(c)[0]
+
+    assert new_a.prefix is None
+    assert new_c.prefix == "f2"
+    assert new_d.prefix == "f3"
+
+    assert new_a.index(new_c) == expected
