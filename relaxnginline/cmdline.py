@@ -115,8 +115,8 @@ def _main(args):
     schema.getroottree().write(outfile)
 
 
-def main():
-    args = docopt.docopt(__doc__, version=__version__)
+def main(argv=None):
+    args = docopt.docopt(__doc__, version=__version__, argv=argv)
     try:
         _main(args)
     except RelaxngInlineError as e:
