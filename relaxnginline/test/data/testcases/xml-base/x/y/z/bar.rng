@@ -1,0 +1,3 @@
+<element name="bar" xmlns="http://relaxng.org/ns/structure/1.0">
+    <externalRef xml:base="../../../a/b/c/d/" href="foo.rng"/>
+</element>

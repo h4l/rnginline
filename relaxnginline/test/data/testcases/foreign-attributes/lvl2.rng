@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <foo xmlns="">
+        hi
+    </foo>
+    <define name="bar">
+        <externalRef href="lvl3.rng"/>
+    </define>
+</grammar>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <include href="included.rng">
+        <!-- this does not override anything: not allowed -->
+        <define name="no-defined-yet">
+            <empty/>
+        </define>
+    </include>
+</grammar>

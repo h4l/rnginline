@@ -1,0 +1,4 @@
+<element name="start" xmlns="http://relaxng.org/ns/structure/1.0">
+    <!-- loop -->
+    <externalRef href="../../../start.rng"/>
+</element>

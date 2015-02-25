@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rng:grammar xmlns:f="foreign" xmlns:rng="http://relaxng.org/ns/structure/1.0">
+    <some-el xmlns="">blah</some-el>
+    <rng:include href="lvl2.rng"/>
+    <rng:start f:foreign-attribute="hi">
+        <element xmlns="other" name="im-not-really-here">
+            <rng:empty/>
+        </element>
+        <foo>
+            <rng:element name="not-in-the-schema">
+                <rng:empty/>
+            </rng:element>
+        </foo>
+        <rng:ref name="bar"/>
+    </rng:start>
+</rng:grammar>

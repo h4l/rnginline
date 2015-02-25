@@ -179,7 +179,7 @@ class Inliner(object):
                              "url: {0}. error: {1}".format(base_url, cause))
             six.raise_from(err, cause)
 
-        assert xml.base == base_url
+        assert xml.getroottree().docinfo.URL == base_url
 
         # Ensure the parsed XML is a relaxng grammar
         self.validate_grammar_xml(xml)
@@ -402,7 +402,7 @@ class Inliner(object):
                                         "element(s) to replace.")
             self._remove_all(starts)
 
-        for name, els in override_defines:
+        for name, els in override_defines.items():
             overridden = defines[name]
             if len(overridden) == 0:
                 raise InvalidGrammarError.from_bad_element(
@@ -436,7 +436,7 @@ class Inliner(object):
         For our purposes, we only care about start elements and define
         elements.
         """
-        assert el.tag in [RNG_START_TAG, RNG_DEFINE_TAG, RNG_INCLUDE_TAG]
+        assert el.tag in [RNG_DIV_TAG, RNG_GRAMMAR_TAG, RNG_INCLUDE_TAG]
         components = el.xpath("rng:start|rng:define", namespaces=NSMAP)
 
         for component in components:

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="schema-ns" xmlns="http://relaxng.org/ns/structure/1.0">
+    <include href="included.rng">
+        <define name="a">
+            <element name="a-overridden">
+                <text/>
+            </element>
+        </define>
+    </include>
+
+    <define name="c" combine="choice">
+        <element name="c-overridden">
+            <text/>
+        </element>
+    </define>
+
+    <define name="d" combine="interleave">
+        <element name="d-overridden">
+            <text/>
+        </element>
+    </define>
+
+    <start>
+        <element name="test" ns="test">
+            <oneOrMore>
+                <element name="test-a">
+                    <ref name="a"/>
+                </element>
+            </oneOrMore>
+            <oneOrMore>
+                <element name="test-b">
+                    <ref name="b"/>
+                </element>
+            </oneOrMore>
+            <oneOrMore>
+                <element name="test-c">
+                    <ref name="c"/>
+                </element>
+            </oneOrMore>
+            <oneOrMore>
+                <element name="test-d">
+                    <ref name="d"/>
+                </element>
+            </oneOrMore>
+        </element>
+    </start>
+</grammar>

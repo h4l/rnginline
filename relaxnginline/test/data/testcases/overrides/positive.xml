@@ -1,0 +1,25 @@
+<test xmlns="test">
+    <test-a>
+        <a-overridden xmlns="schema-ns">foo</a-overridden>
+    </test-a>
+
+    <test-b>
+        <b-included xmlns="included-ns">foo</b-included>
+    </test-b>
+
+    <test-c>
+        <c-overridden xmlns="schema-ns">foo</c-overridden>
+    </test-c>
+    <test-c>
+        <c-included xmlns="included-ns">foo</c-included>
+    </test-c>
+
+    <test-d>
+        <d-included xmlns="included-ns">foo</d-included>
+        <d-overridden xmlns="schema-ns">foo</d-overridden>
+    </test-d>
+    <test-d>
+        <d-overridden xmlns="schema-ns">foo</d-overridden>
+        <d-included xmlns="included-ns">foo</d-included>
+    </test-d>
+</test>

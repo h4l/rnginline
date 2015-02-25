@@ -1,0 +1,3 @@
+<element name="bob" xmlns="http://relaxng.org/ns/structure/1.0">
+    <text/>
+</element>

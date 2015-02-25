@@ -10,7 +10,8 @@ import pkg_resources as pr  # setuptools, but only used in tests
 import relaxnginline
 from relaxnginline import DeferredXmlInsertion
 from relaxnginline.urlhandlers import construct_py_pkg_data_url
-from relaxnginline.exceptions import InvalidGrammarError
+from relaxnginline.exceptions import (InvalidGrammarError,
+                                      SchemaIncludesSelfError)
 
 
 TESTPKG = "relaxnginline.test"
@@ -169,6 +170,40 @@ def test_deferred_xml_insertion__replace():
     assert new_a.prefix is None and new_a.tag == "{foo}a"
     assert new_c.prefix == "f2" and new_c.tag == "{foo}c"
     assert new_d.prefix == "f3" and new_d.tag == "{foo}d"
+
+
+def test_foreign_attrs_cant_be_in_default_ns():
+    xml = """\
+    <grammar xmlns="http://relaxng.org/ns/structure/1.0">
+        <start {0}>
+            <element name="foo">
+                <empty/>
+            </element>
+        </start>
+    </grammar>
+    """
+    relaxnginline.inline(etree=etree.XML(xml.format("")))
+
+    with pytest.raises(InvalidGrammarError):
+        relaxnginline.inline(etree=etree.XML(xml.format('illegal-attr="abc"')))
+
+
+def test_include_loops_trigger_error():
+    with pytest.raises(SchemaIncludesSelfError):
+        relaxnginline.inline(
+            url=construct_py_pkg_data_url(TESTPKG, "data/loops/start.rng"))
+
+
+def test_include_cant_override_start_if_no_start_in_included_file():
+    with pytest.raises(InvalidGrammarError):
+        relaxnginline.inline(url=construct_py_pkg_data_url(
+            TESTPKG, "data/include-override-start/start.rng"))
+
+
+def test_include_cant_override_define_if_no_matching_define_in_included_file():
+    with pytest.raises(InvalidGrammarError):
+        relaxnginline.inline(url=construct_py_pkg_data_url(
+            TESTPKG, "data/include-override-define/start.rng"))
 
 
 @pytest.mark.parametrize("xml,index,expected", [

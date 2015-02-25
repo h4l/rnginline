@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="example" xmlns="http://relaxng.org/ns/structure/1.0">
+    <include href="included.rng">
+        <!-- start does not override anything: not allowed -->
+        <start>
+            <ref name="foo"/>
+        </start>
+    </include>
+</grammar>
