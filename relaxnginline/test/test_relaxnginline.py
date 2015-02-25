@@ -119,13 +119,13 @@ def test_testcases(schema_file, test_file, should_match):
             # Should match
             schema.assertValid(xml)
         except etree.DocumentInvalid as e:
-            pytest.fail("{} should match {} but didn't: {}"
+            pytest.fail("{0} should match {1} but didn't: {2}"
                         .format(test_file, schema_file, schema.error_log))
     else:
         with pytest.raises(etree.DocumentInvalid):
             # Shouldn't match
             schema.assertValid(xml)
-            pytest.fail("{} shouldn't match {} but did"
+            pytest.fail("{0} shouldn't match {1} but did"
                         .format(test_file, schema_file))
 
 
