@@ -24,8 +24,9 @@ class DereferenceError(RelaxngInlineError):
 class InvalidGrammarError(BadXmlError):
     @classmethod
     def from_bad_element(cls, el, msg):
-        return cls("{0} on line {1} {2}"
-                   .format(el.tag, el.sourceline or "??", msg))
+        return cls("{0} in {1} on line {2} {3}"
+                   .format(el.tag, el.getroottree().docinfo.URL or "??",
+                           el.sourceline or "??", msg))
 
 
 class SchemaIncludesSelfError(InvalidGrammarError, DereferenceError):
