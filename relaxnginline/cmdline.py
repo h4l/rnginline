@@ -58,6 +58,9 @@ from relaxnginline.exceptions import ParseError, RelaxngInlineError
 
 
 def py2_decode_bytes(cmdline_argument):
+    if not isinstance(cmdline_argument, six.string_types):
+        return cmdline_argument
+
     # Python 2 provides command line args as bytes rather than text
     if six.PY2:
         assert isinstance(cmdline_argument, six.binary_type)
