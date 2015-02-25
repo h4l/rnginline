@@ -99,14 +99,15 @@ def _testcase_id(tc):
     assert schema.startswith(prefix)
     assert file.startswith(prefix)
 
-    return "{},{},{}".format(schema[len(prefix):], file[len(prefix):],
-                             should_match)
+    return "{0},{1},{2}".format(schema[len(prefix):], file[len(prefix):],
+                                should_match)
 
 
 test_testcases_testcases = _load_testcases()
-@pytest.mark.parametrize(
-    "schema_file,test_file,should_match", test_testcases_testcases,
-    ids=map(_testcase_id, test_testcases_testcases))
+ttt_ids =[_testcase_id(tc) for tc in test_testcases_testcases]
+
+@pytest.mark.parametrize("schema_file,test_file,should_match",
+                         test_testcases_testcases, ids=ttt_ids)
 def test_testcases(schema_file, test_file, should_match):
     schema = relaxnginline.inline(
         construct_py_pkg_data_url(TESTPKG, schema_file))

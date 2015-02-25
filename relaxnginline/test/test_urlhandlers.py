@@ -80,6 +80,7 @@ def test_pypkgdata_uri_creation():
     assert deconstruct_py_pkg_data_url(created_url) == (package, path)
 
 
+@pytest.mark.skipif(six.PY3, reason="Python 2 specific behaviour")
 def test_pypkgdata_uri_creation_allows_package_as_bytes():
     # On py2 __name__ is a byte string, so it makes sense to accept bytes for
     # the package
