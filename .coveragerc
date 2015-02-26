@@ -1,0 +1,3 @@
+[run]
+omit = relaxnginline/test/*
+include = relaxnginline/*
