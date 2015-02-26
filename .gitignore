@@ -6,3 +6,5 @@
 htmlcov/
 build/
 dist/
+.coverage
+.coverage.*
