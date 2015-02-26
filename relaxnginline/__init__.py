@@ -544,6 +544,7 @@ class DeferredXmlInsertion(object):
         # root_el is the root el of its tree
         assert root_el.getroottree().getroot() == root_el
         self.root_el = root_el
+        self.root_replacement = None
         self.pending_insertions = []
         self.insertions_performed = False
 
@@ -589,7 +590,11 @@ class DeferredXmlInsertion(object):
         if prev is None:
             # Nothing to maintain in old_el's tree, old_el must be the root.
             assert self.root_el == old_el
-            raise ValueError("Can't register the root_el for replacement")
+            if self.root_replacement is not None:
+                raise ValueError("Root already replaced, refusing to replace "
+                                 "again as this call must be a coding error.")
+            self.root_replacement = new_el
+            return
 
         # Remove old_el immediately, and register the insertion
         self._register_insertion(prev, insert_after, new_el)
@@ -632,11 +637,11 @@ class DeferredXmlInsertion(object):
             self._prevent_repeated_insertions()
             return self.root_el
 
-        mergex_xml = self._perform_insertions_internal()
+        merged_xml = self._perform_insertions_internal()
 
         # Parse the merged string, maintaining the base URL of the previous doc
         return etree.fromstring(
-            mergex_xml, base_url=self.root_el.getroottree().docinfo.URL)
+            merged_xml, base_url=self.root_el.getroottree().docinfo.URL)
 
     def _get_xml_string(self, el):
         if isinstance(el, DeferredXmlInsertion):
@@ -645,6 +650,16 @@ class DeferredXmlInsertion(object):
 
     def _perform_insertions_internal(self):
         self._prevent_repeated_insertions()
+
+        # We never have a situation where the root is replaced, and insertions
+        # are registered.
+        assert (self.root_replacement is None or
+                len(self.pending_insertions) == 0)
+
+        # root_replacement will be an Element/DXI only if if the root was
+        # registered for replacement.
+        if self.root_replacement is not None:
+            return self._get_xml_string(self.root_replacement)
 
         root_xml = etree.tostring(self.root_el, encoding="unicode")
 
