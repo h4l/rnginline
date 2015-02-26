@@ -6,10 +6,12 @@ import re
 from lxml import etree
 import pytest
 import pkg_resources as pr  # setuptools, but only used in tests
+import mock
 
 import relaxnginline
 from relaxnginline import DeferredXmlInsertion
-from relaxnginline.urlhandlers import construct_py_pkg_data_url
+from relaxnginline.urlhandlers import (construct_py_pkg_data_url,
+                                       PackageDataUrlHandler)
 from relaxnginline.exceptions import (InvalidGrammarError,
                                       SchemaIncludesSelfError)
 
@@ -241,3 +243,17 @@ def test_deferred_xml_insertion__insert(xml, index, expected):
     assert new_d.prefix == "f3"
 
     assert new_a.index(new_c) == expected
+
+
+def test_multiple_references_to_same_uri_results_in_1_fetch():
+    handler = PackageDataUrlHandler()
+    # Mock the dereference method to allow calls to be observed
+    handler.dereference = mock.Mock(side_effect=handler.dereference)
+
+    url = construct_py_pkg_data_url(
+        TESTPKG, "data/multiple-ref-1-fetch/schema.rng")
+
+    relaxnginline.inline(url=url, handlers=[handler])
+
+    # schema.rng, indrect.rng & 5x popular.rng = 3 fetches total
+    assert len(handler.dereference.mock_calls) == 3

@@ -1,0 +1,16 @@
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <include href="a/b/c/popular.rng">
+        <start><notAllowed/></start>
+    </include>
+
+    <start combine="choice">
+        <element name="rootel">
+            <grammar>
+                <include href="a/b/c/popular.rng"/>
+            </grammar>
+            <externalRef href="../multiple-ref-1-fetch/a/b/c/popular.rng"/>
+            <externalRef xml:base="a/b/c/" href="popular.rng"/>
+            <externalRef href="indirect.rng"/>
+        </element>
+    </start>
+</grammar>

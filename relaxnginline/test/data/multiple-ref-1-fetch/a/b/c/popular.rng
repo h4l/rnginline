@@ -1,0 +1,12 @@
+<!-- This file is included a lot. -->
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <start>
+        <ref name="pop"/>
+    </start>
+
+    <define name="pop">
+        <element name="popular-el">
+            <empty/>
+        </element>
+    </define>
+</grammar>
