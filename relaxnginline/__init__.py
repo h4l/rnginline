@@ -69,7 +69,12 @@ class InlineContext(object):
         return url in self.dereferenced_urls
 
     def get_previous_dereference(self, url):
-        return copy.deepcopy(self.dereferenced_urls[url])
+        return self.dereferenced_urls[url]
+
+    def store_dereference_result(self, url, content):
+        assert url not in self.dereferenced_urls
+        assert isinstance(content, six.binary_type)
+        self.dereferenced_urls[url] = content
 
     def url_in_context(self, url):
         return any(u == url for (u, _, _) in self.url_context_stack)
@@ -165,11 +170,14 @@ class Inliner(object):
 
     def dereference_url(self, url, context):
         if context.has_been_dereferenced(url):
-            return context.get_previous_dereference(url)
+            content = context.get_previous_dereference(url)
+        else:
+            parsed_url = self.parse_url(url)
+            handler = self.get_handler(url)
+            content = handler.dereference(parsed_url)
+            context.store_dereference_result(url, content)
 
-        parsed_url = self.parse_url(url)
-        handler = self.get_handler(url)
-        return self.parse_grammar_xml(handler.dereference(parsed_url), url)
+        return self.parse_grammar_xml(content, url)
 
     def parse_grammar_xml(self, xml_string, base_url):
         try:
