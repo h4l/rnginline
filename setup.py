@@ -18,6 +18,7 @@ def get_version(filename):
 
 setup(
     name="relaxnginline",
+    url="https://github.com/h4l/relaxnginline",
     version=get_version("relaxnginline/__init__.py"),
     packages=["relaxnginline"],
     author="Hal Blackburn",
