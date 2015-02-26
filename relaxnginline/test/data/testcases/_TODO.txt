@@ -1,2 +1,0 @@
-* Test qnames mapping to different NSes in base and imported files
-
