@@ -147,9 +147,10 @@ def deconstruct_py_pkg_data_url(url):
 class FilesystemUrlHandler(object):
 
     def can_handle(self, url):
-        return url.scheme == "file"
+        return ensure_parsed(url).scheme == "file"
 
     def dereference(self, url):
+        url = ensure_parsed(url)
         assert self.can_handle(url)
 
         # Paths will always be absolute due to relative paths being resolved
@@ -174,9 +175,10 @@ class FilesystemUrlHandler(object):
 class PackageDataUrlHandler(object):
 
     def can_handle(self, url):
-        return url.scheme == "pypkgdata"
+        return ensure_parsed(url).scheme == "pypkgdata"
 
     def dereference(self, url):
+        url = ensure_parsed(url)
         assert self.can_handle(url)
 
         package, pkg_path = deconstruct_py_pkg_data_url(url)

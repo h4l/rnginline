@@ -154,14 +154,8 @@ class Inliner(object):
             grammar = pp.postprocess(grammar)
         return grammar
 
-    def parse_url(self, url):
-        if isinstance(url, parse.SplitResult):
-            return url
-        return parse.urlsplit(url)
-
     def get_handler(self,  url):
-        parsed_url = self.parse_url(url)
-        handlers = (h for h in self.handlers if h.can_handle(parsed_url))
+        handlers = (h for h in self.handlers if h.can_handle(url))
         try:
             return next(handlers)
         except StopIteration:
@@ -172,9 +166,8 @@ class Inliner(object):
         if context.has_been_dereferenced(url):
             content = context.get_previous_dereference(url)
         else:
-            parsed_url = self.parse_url(url)
             handler = self.get_handler(url)
-            content = handler.dereference(parsed_url)
+            content = handler.dereference(url)
             context.store_dereference_result(url, content)
 
         return self.parse_grammar_xml(content, url)
@@ -301,7 +294,7 @@ class Inliner(object):
 
         if path is not None:
             assert url is None and etree is None
-            url = urlhandlers.deconstruct_file_url(path)
+            url = urlhandlers.construct_file_url(path)
 
         context = InlineContext()
 

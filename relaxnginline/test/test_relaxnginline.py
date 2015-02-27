@@ -9,14 +9,20 @@ import pkg_resources as pr  # setuptools, but only used in tests
 import mock
 
 import relaxnginline
-from relaxnginline import DeferredXmlInsertion
-from relaxnginline.urlhandlers import (construct_py_pkg_data_url,
-                                       PackageDataUrlHandler)
-from relaxnginline.exceptions import (InvalidGrammarError,
-                                      SchemaIncludesSelfError)
+from relaxnginline import DeferredXmlInsertion, uri
+
+from relaxnginline.urlhandlers import (
+    construct_py_pkg_data_url, PackageDataUrlHandler, FilesystemUrlHandler,
+    construct_file_url)
+
+from relaxnginline.exceptions import (
+    InvalidGrammarError, SchemaIncludesSelfError, NoAvailableHandlerError,
+    ParseError)
 
 
 TESTPKG = "relaxnginline.test"
+
+DATA_URI = construct_py_pkg_data_url(TESTPKG, "data/")
 
 
 def _load_testcases():
@@ -257,3 +263,179 @@ def test_multiple_references_to_same_uri_results_in_1_fetch():
 
     # schema.rng, indrect.rng & 5x popular.rng = 3 fetches total
     assert len(handler.dereference.mock_calls) == 3
+
+
+def test_override_default_base_uri():
+    default_base_uri = construct_py_pkg_data_url(TESTPKG,
+                                                 "data/testcases/xml-base/")
+    schema = relaxnginline.inline(url="schema.rng",
+                                  default_base_uri=default_base_uri)
+
+    h = PackageDataUrlHandler()
+    xml_url = uri.resolve(default_base_uri, "positive-1.xml")
+    xml = etree.fromstring(h.dereference(xml_url))
+
+    assert schema(xml)
+
+
+def test_overridden_base_uri_must_be_absolute():
+    """
+    The default base URI must be an absolute URI. i.e. matches the URI grammar,
+    not the URI-reference grammar.
+    """
+    relative_uri = "/some/path/blah"
+    assert uri.is_uri_reference(relative_uri)
+    assert not uri.is_uri(relative_uri)
+
+    with pytest.raises(ValueError):
+        relaxnginline.Inliner(default_base_uri=relative_uri)
+
+
+def test_unhandleable_url_raises_error():
+    with pytest.raises(NoAvailableHandlerError):
+        relaxnginline.inline(url="my-fancy-url-scheme:/foo")
+
+
+def test_context_pushes_must_have_parents_except_first():
+    context = relaxnginline.InlineContext()
+
+    with context.track("x:/some/url"):
+        with pytest.raises(ValueError):
+            # Tracking second URL without passing context el: not allowed
+            with context.track("x:/other/url"):
+                pass
+
+
+def test_including_invalid_xml_file_raises_parse_error():
+    url = construct_py_pkg_data_url(TESTPKG, "data/include-invalid-xml/ok.rng")
+    with pytest.raises(ParseError):
+        relaxnginline.inline(url=url)
+
+
+def test_including_non_rng_xml_file_raises_invalid_grammar_error():
+    url = construct_py_pkg_data_url(TESTPKG, "data/include-non-rng-xml/ok.rng")
+    with pytest.raises(InvalidGrammarError):
+        relaxnginline.inline(url=url)
+
+
+def test_calling_inline_with_0_args_raises_value_error():
+    with pytest.raises(ValueError):
+        relaxnginline.inline()
+
+
+def test_inline_etree_el_with_no_base_uri_uses_default_base_uri():
+    handler = PackageDataUrlHandler()
+    base_url = construct_py_pkg_data_url(TESTPKG,
+                                        "data/testcases/xml-base/")
+    schema_bytes = handler.dereference(uri.resolve(base_url, "schema.rng"))
+
+    schema_el = etree.fromstring(schema_bytes)
+    assert schema_el.getroottree().docinfo.URL is None
+
+    # The default-default base URI is the pwd, so let's use something else
+    # to demonstrate this. An unhandlable URI will result in a
+    # NoAvailableHandlerError when the first href is dereferenced.
+    with pytest.raises(NoAvailableHandlerError):
+        relaxnginline.inline(etree=schema_el, default_base_uri="x:")
+
+    # If we use a sensible default base URI the references will be resolved OK,
+    # even though the XML document itself has no base URI
+    schema = relaxnginline.inline(etree=schema_el, default_base_uri=base_url)
+
+    assert schema(etree.fromstring(handler.dereference(
+        uri.resolve(base_url, "positive-1.xml"))))
+
+
+def test_inline_args_etree_as_src():
+    handler = PackageDataUrlHandler()
+    url = uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")
+    schema_el = etree.fromstring(handler.dereference(
+        uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")), base_url=url)
+
+    assert etree.iselement(schema_el)
+
+    # pass schema_el as src, should be detected as an Element
+    schema = relaxnginline.inline(schema_el)
+
+    assert schema(etree.fromstring(handler.dereference(
+        uri.resolve(url, "positive-1.xml"))))
+
+
+def test_inline_args_etree_doc_as_src():
+    handler = PackageDataUrlHandler()
+    url = uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")
+    schema_el = etree.fromstring(handler.dereference(
+        uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")), base_url=url)
+
+    schema_root = schema_el.getroottree()
+    assert not etree.iselement(schema_root)
+
+    # pass etree document (not el) as src, should pull out root el and use it
+    schema = relaxnginline.inline(schema_root)
+
+    assert schema(etree.fromstring(handler.dereference(
+        uri.resolve(url, "positive-1.xml"))))
+
+
+def test_inline_args_url_refs_must_be_valid():
+    bad_url = "/tmp/File Name With Spaces"
+    assert not uri.is_uri_reference(bad_url)
+
+    with pytest.raises(ValueError):
+        relaxnginline.inline(url=bad_url)
+
+
+def test_inline_args_fs_path_as_src():
+    grammar_xml = b"""
+    <element name="start" xmlns="http://relaxng.org/ns/structure/1.0">
+        <empty/>
+    </element>
+    """
+    path = "/some/dir/Filename with spaces.rng"
+    handler = FilesystemUrlHandler()
+    handler.dereference = mock.Mock(side_effect=[grammar_xml])
+
+    relaxnginline.inline(path, handlers=[handler])
+
+    handler.dereference.assert_called_once_with(
+        construct_file_url(path))
+
+
+def test_inline_args_passing_garbage():
+    with pytest.raises(ValueError):
+        # pass a useless arg as src
+        relaxnginline.inline(1234)
+
+
+def test_context_pop_with_no_context_raises_error():
+    context = relaxnginline.InlineContext()
+
+    with pytest.raises(ValueError):
+        context._pop_context("x:/url", None)
+
+
+def test_context_pop_with_no_context_raises_error():
+    context = relaxnginline.InlineContext()
+
+    with pytest.raises(ValueError):
+        context._pop_context("x:/url", None)
+
+
+
+def test_context_pop_with_mismatching_url_raises_error():
+    context = relaxnginline.InlineContext()
+    token = context._push_context("x:/foo", None)
+
+    with pytest.raises(ValueError):
+        # different URL to push call
+        context._pop_context("x:/bar", token)
+
+
+def test_context_pop_with_mismatching_token_raises_error():
+    context = relaxnginline.InlineContext()
+    url = "x:/foo"
+    token = context._push_context(url, None)
+
+    with pytest.raises(ValueError):
+        # different token to push call
+        context._pop_context(url, object())
