@@ -1,0 +1,4 @@
+<root xmlns="ns-1">
+    <foo xmlns="ns-2"/>
+    <foo xmlns="ns-1"/>
+</root>

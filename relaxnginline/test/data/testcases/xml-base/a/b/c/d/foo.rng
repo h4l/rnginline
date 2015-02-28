@@ -1,3 +1,6 @@
 <element name="foo" xmlns="http://relaxng.org/ns/structure/1.0">
     <empty/>
+    <!-- href attributes may be empty. But unless the base URI is changed
+         they'll just refer to the current file, creating a loop.-->
+    <externalRef xml:base="../../baz.rng" href=""/>
 </element>

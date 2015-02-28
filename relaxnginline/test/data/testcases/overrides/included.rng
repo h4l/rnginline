@@ -23,4 +23,18 @@
             <text/>
         </element>
     </define>
+
+    <div>
+        <div>
+            <div>
+                <div>
+                    <define name="e">
+                        <element name="e-included">
+                            <text/>
+                        </element>
+                    </define>
+                </div>
+            </div>
+        </div>
+    </div>
 </grammar>

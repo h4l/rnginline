@@ -181,6 +181,33 @@ def test_deferred_xml_insertion__replace():
     assert new_d.prefix == "f3" and new_d.tag == "{foo}d"
 
 
+def test_deferred_xml_insertion__replace_root_can_only_happen_once():
+    a = etree.XML("""<a><b/></a>""")
+    c = etree.XML("""<c><d/></c>""")
+    d = list(c)[0]
+
+    dxi = DeferredXmlInsertion(a)
+    dxi.register_replace(a, c)
+
+    # We don't allow the root to be replaced twice. Mainly because we never need
+    # to, so it would indicate an error.
+    with pytest.raises(ValueError):
+        dxi.register_replace(a, d)
+
+
+def test_deferred_xml_insertion__perform_insertions_can_only_happen_once():
+    a = etree.XML("""<a><b/></a>""")
+    b = list(a)[0]
+    c = etree.XML("""<c><d/></c>""")
+
+    dxi = DeferredXmlInsertion(a)
+    dxi.register_replace(b, c)
+    xml = dxi.perform_insertions()
+    # We don't allow insertions to be performed twice, as it's never necessary
+    with pytest.raises(AssertionError):
+        dxi.perform_insertions()
+
+
 def test_foreign_attrs_cant_be_in_default_ns():
     xml = """\
     <grammar xmlns="http://relaxng.org/ns/structure/1.0">

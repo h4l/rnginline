@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar ns="ns-1" xmlns="http://relaxng.org/ns/structure/1.0">
+    <start>
+        <element name="root">
+            <!-- Override ns to ns-2 -->
+            <externalRef ns="ns-2" href="external.rng"/>
+            <!-- Don't override ns -->
+            <externalRef href="external.rng"/>
+        </element>
+    </start>
+</grammar>

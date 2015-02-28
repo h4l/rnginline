@@ -6,6 +6,14 @@
                 <text/>
             </element>
         </define>
+
+        <!-- e is nested in lots of divs, but should still be found and
+             overridden. -->
+        <define name="e">
+            <element name="e-overridden">
+                <text/>
+            </element>
+        </define>
     </include>
 
     <define name="c" combine="choice">
@@ -40,6 +48,11 @@
             <oneOrMore>
                 <element name="test-d">
                     <ref name="d"/>
+                </element>
+            </oneOrMore>
+            <oneOrMore>
+                <element name="test-e">
+                    <ref name="e"/>
                 </element>
             </oneOrMore>
         </element>

@@ -22,4 +22,7 @@
         <d-overridden xmlns="schema-ns">foo</d-overridden>
         <d-included xmlns="included-ns">foo</d-included>
     </test-d>
+    <test-e>
+        <e-overridden xmlns="schema-ns">foo</e-overridden>
+    </test-e>
 </test>

@@ -446,7 +446,7 @@ class Inliner(object):
         # Recursively yield the components of child divs
         div_children = el.xpath("rng:div", namespaces=NSMAP)
         for div in div_children:
-            for components in self._components(div):
+            for component in self._raw_components(div):
                 yield component
 
     def _inline_external_refs(self, dxi, grammar, context):
@@ -491,14 +491,10 @@ class Inliner(object):
         return uri.resolve(self.default_base_uri, base)
 
     def _get_href_url(self, el):
-        if "href" not in el.attrib:
-            raise InvalidGrammarError.from_bad_element(
-                el, "has no href attribute")
+        # validate_grammar_xml() ensures we have an href attr
+        assert "href" in el.attrib
 
         href = el.attrib["href"]
-        if len(href) == 0:
-            raise InvalidGrammarError.from_bad_element(
-                el, "has empty href attribute")
 
         # RELAX NG / XLink 1.0 permit various characters in href attrs which
         # are not permitted in URLs. These have to be escaped to make the value

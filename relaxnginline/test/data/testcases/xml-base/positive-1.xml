@@ -1,5 +1,7 @@
 <start>
     <bar>
-        <foo/>
+        <foo>
+            <baz/>
+        </foo>
     </bar>
 </start>
