@@ -1,4 +1,7 @@
-"""
+from __future__ import unicode_literals, print_function
+
+# Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
+__doc__ = DOC = """
 Flatten a hierachy of RELAX NG schemas into a single schema by recursively
 inlining <include>/<externalRef> elements.
 
@@ -13,20 +16,21 @@ options:
         Filesystem path to write the inlined schema to. If not provided, or is
         -, stdout is written to.
 
-    --default-base-uri <URI>
-        Override the default base URI, which is file:<current dir>. The
-        schema's base URI (e.g. the location it was loaded from, or applicable
-        xml:base attribute value) is resolved against the default base URI in
-        order to produce an absolute base URI to resolve href attribute values
-        against when fetching schemas referenced by <include>/<externalRef>
-        elements. Note that <URI> must be a an absolute URI with a scheme, not
-        a URI-reference.
+    --traceback
+        Print the Python traceback on errors.
 
     --no-libxml2-compat
         Don't apply a workaround to make the output compatible with versions of
         libxml2 affected by bug:
             https://bugzilla.gnome.org/show_bug.cgi?id=744146
 
+    --version
+        Print the version and exit.
+
+    --help, -h
+        Show this help.
+
+advanced options:
     --stdin
         Read the schema from stdin instead of from a URL or path.
 
@@ -34,18 +38,22 @@ options:
         being unknown to this program, so relative hrefs in the schema will
         be resolved relative to the current directory, rather than the schema's
         location. This is usually not what you want, hence this option being
-        explicitly required.
+        explicitly required. You should almost certainly use --base-uri along
+        with this option.
 
-    --traceback
-        Print the Python traceback on errors.
+    --base-uri, -b <URI-reference>
+        Replace the implicit URI of the input with the given URI. Only required
+        when using stdin or something odd/advanced. Can be a relative URI.
 
-    --version
-        Print the version and exit.
-
-    --help, -h
-        Show this help.
+    --default-base-uri <URI>
+        Override the default base URI, which is file:<current dir> (ending in
+        a /). The schema's base URI (e.g. the location it was loaded from, or
+        applicable xml:base attribute value) is resolved against the default
+        base URI in order to produce an absolute base URI to resolve href
+        attribute values against when fetching schemas referenced by
+        <include>/<externalRef> elements. Note that <URI> must be a an absolute
+        URI with a scheme, not a URI-reference.
 """
-from __future__ import unicode_literals, print_function
 
 import sys
 import locale
@@ -72,21 +80,9 @@ def py2_decode_bytes(cmdline_argument):
     return cmdline_argument
 
 
-def parse_stdin():
-    stdin = sys.stdin.buffer if six.PY3 else sys.stdin
-    try:
-        xml = etree.parse(stdin, base_url="")
-    except etree.ParseError as cause:
-            err = ParseError("Unable to parse <stdin> as XML. error: {0}"
-                             .format(cause))
-            six.raise_from(err, cause)
-    assert xml.docinfo.URL is None, xml.docinfo.URL
-    return xml
-
-
 def _main(args):
     if args["--stdin"]:
-        src = parse_stdin()
+        src = sys.stdin.buffer if six.PY3 else sys.stdin
     else:
         src = py2_decode_bytes(args["<rng-src>"])
 
@@ -106,18 +102,26 @@ def _main(args):
                 "The --default-base-uri provided is not a valid URI: {0}"
                 .format(default_base_uri))
 
+    base_uri = None
+    if args["--base-uri"]:
+        base_uri = py2_decode_bytes(args["--base-uri"])
+
+        if not uri.is_uri_reference(base_uri):
+            raise RelaxngInlineError("The --base-uri provided is not a valid "
+                                     "URI-reference: {0}".format(base_uri))
+
     postprocessors = None  # defaults
     if args["--no-libxml2-compat"]:
         postprocessors = []
 
     schema = inline(src, postprocessors=postprocessors, create_validator=False,
-                    default_base_uri=default_base_uri)
+                    base_uri=base_uri, default_base_uri=default_base_uri)
 
     schema.getroottree().write(outfile)
 
 
 def main(argv=None):
-    args = docopt.docopt(__doc__, version=__version__, argv=argv)
+    args = docopt.docopt(DOC, version=__version__, argv=argv)
     try:
         _main(args)
     except RelaxngInlineError as e:

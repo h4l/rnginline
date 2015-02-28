@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-from contextlib import contextmanager
 
+import re
 import os
-import io
 from os import path
 import tempfile
+from contextlib import contextmanager
 
 from lxml import etree
 import pkg_resources
@@ -14,15 +14,14 @@ import six
 
 from relaxnginline import _get_cwd
 from relaxnginline.cmdline import main as rng_main
+from relaxnginline.test.mini_validator import main as minival_main
+from relaxnginline.exceptions import RelaxngInlineError
 
 from relaxnginline.urlhandlers import (
     PackageDataUrlHandler, construct_py_pkg_data_url, construct_file_url)
 
 from relaxnginline.test.test_relaxnginline import (
     test_testcases_testcases, ttt_ids)
-
-
-from relaxnginline.test.mini_validator import main as minival_main
 
 
 @contextmanager
@@ -124,9 +123,12 @@ def test_cmdline_from_non_ascii_dir(testcase_dir):
     os.rmdir(new_dir)
 
 
+
+@pytest.mark.parametrize("base_arg",
+                         ["--default-base-uri", "--base-uri", "-b"])
 @pytest.mark.parametrize("stdout_arg", [[], ["-"]],
                          ids=["implicit stdout", "minus char"])
-def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, monkeypatch):
+def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
     # Note that using stdin is rather awkward as it means we don't know what
     # the base URI of the input is. So that has to be set explicitly using
     # --default-base-uri.
@@ -142,8 +144,8 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, monkeypatch):
 
     base = construct_file_url(_external_path(testcase_dir, schema_path))
 
-    new_stdin = io.BytesIO(schema_bytes)
-    new_stdout = io.BytesIO()
+    new_stdin = six.BytesIO(schema_bytes)
+    new_stdout = six.BytesIO()
     new_stdin.buffer = new_stdin  # fake sys.stdin.buffer for Py 3
     new_stdout.buffer = new_stdout
 
@@ -152,8 +154,77 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, monkeypatch):
 
     # Generate the inlined schema with the command line tool
     rng_main(argv=_cmdline_args(
-        ["--default-base-uri", base, "--stdin"] + stdout_arg))
+        [base_arg, base, "--stdin"] + stdout_arg))
 
     new_stdout.seek(0)
     schema = etree.RelaxNG(file=new_stdout)
     assert schema(etree.XML(xml_bytes))
+
+
+@pytest.mark.parametrize("base_uri_arg",
+                         ["--default-base-uri", "--base-uri", "-b"])
+def test_cmdline_rejects_invalid_base_uri(base_uri_arg, monkeypatch):
+    bad_uri = "/foo bar"  # contains a space
+
+    stderr = six.StringIO()
+    monkeypatch.setattr("sys.stderr", stderr)
+
+    with pytest.raises(SystemExit) as excinfo:
+        rng_main(argv=_cmdline_args([base_uri_arg, bad_uri, "/dev/null"]))
+    stderr.seek(0)
+
+    assert excinfo.value.code == 1
+    assert "base-uri" in stderr.read()
+
+
+def test_cmdline_traceback_produces_traceback(monkeypatch):
+    stderr = six.StringIO()
+    monkeypatch.setattr("sys.stderr", stderr)
+
+    # Patch stdin to blow up when read is called
+    class MyTestingRngError(RelaxngInlineError):
+        pass
+    class Boomer(object):
+        def read(self):
+            raise MyTestingRngError("boom!")
+    stdin = Boomer()
+    stdin.buffer = stdin  # emulate sys.stdin.buffer for Py 3
+    monkeypatch.setattr("sys.stdin", stdin)
+
+    with pytest.raises(SystemExit) as excinfo:
+        rng_main(argv=_cmdline_args(["--traceback", "--stdin"]))
+    stderr.seek(0)
+
+    assert re.search("""MyTestingRngError\(.boom!.\)""", stderr.read())
+
+
+@pytest.mark.parametrize("compat_arg,should_match_input", [
+    # If libxml2 compat is disabled then the output will match the input
+    (["--no-libxml2-compat"], True),
+    # If compat's on (the default) then the input will be modified to put
+    # datatypeLibrary on the data el.
+    ([], False)
+])
+def test_cmdline_no_libxml2_compat_disables_compat(
+        compat_arg, should_match_input, monkeypatch):
+    input = (
+        '<element name="start" xmlns="http://relaxng.org/ns/structure/1.0" '
+        'datatypeLibrary="foo">'
+        '<data type="bar"/>'
+        '</element>'
+    )
+    input = etree.tostring(etree.XML(input), method="c14n")
+
+    stdin = six.BytesIO(input)
+    stdout = six.BytesIO()
+    stdin.buffer = stdin
+    stdout.buffer = stdout
+
+    monkeypatch.setattr("sys.stdin", stdin)
+    monkeypatch.setattr("sys.stdout", stdout)
+
+    rng_main(argv=_cmdline_args(compat_arg + ["--stdin"]))
+    stdout.seek(0)
+    output = etree.tostring(etree.XML(stdout.read()), method="c14n")
+
+    assert (input == output) == should_match_input

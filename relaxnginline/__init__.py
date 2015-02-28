@@ -125,7 +125,8 @@ class Inliner(object):
             self.get_default_handlers() if handlers is None else handlers)
 
         self.postprocessors = list(self.get_default_postprocessors()
-                                   if postprocessors is None else postprocess)
+                                   if postprocessors is None
+                                   else postprocessors)
 
         if default_base_uri is None:
             self.default_base_uri = self.get_default_default_base_uri()
