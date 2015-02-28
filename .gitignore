@@ -1,5 +1,5 @@
 *.egg-info
-*.pyc
+*.py[co]
 .idea/
 .tox
 .coverage
