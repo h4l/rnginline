@@ -25,7 +25,8 @@ def validate(argv):
     xml = etree.parse(options["<xmlfile>"])
     validator = etree.RelaxNG(etree.parse(options["<rngfile>"]))
 
-    sys.exit(0 if validator(xml) else 2)
+    if not validator(xml):
+        sys.exit(2)
 
 
 if __name__ == "__main__":

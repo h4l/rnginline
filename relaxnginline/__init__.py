@@ -6,6 +6,7 @@ import collections
 import pkgutil
 import copy
 import os
+from os import path
 import uuid
 
 from lxml import etree
@@ -136,11 +137,10 @@ class Inliner(object):
         """
         Get the URI to use as the default_base_uri if none is provided.
         """
-        dir = os.getcwd()
         # Directory URLs need to end with a slash, otherwise the last path
         # segment will be dropped when resolve()ing.
-        if not dir.endswith("/"):
-            dir = dir + "/"
+        dir = path.join(_get_cwd(), "")
+        assert dir.endswith("/")
         return urlhandlers.construct_file_url(dir)
 
     def get_default_postprocessors(self):
@@ -680,3 +680,10 @@ def _escape_match(match):
 def escape_reserved_characters(url):
     utf8 = url.encode("utf-8")
     return NEEDS_ESCAPE_RE.sub(_escape_match, utf8).decode("ascii")
+
+def _get_cwd():
+    # Six doesn't currently handle this difference between Py 2 and 3:
+    # getcwd() returns bytes on Py 2 but text in Py 3.
+    if six.PY2:
+        return os.getcwdu()
+    return os.getcwd()

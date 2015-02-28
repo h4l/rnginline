@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <!-- This datatypeLibrary val will be ignored -->
+    <include datatypeLibrary="x:/blah" href="included.rng"/>
+
+    <start>
+        <element name="root">
+            <!-- This datatypeLibrary val will be ignored -->
+            <externalRef datatypeLibrary="x:/blah" href="external.rng"/>
+            <ref name="bar"/>
+        </element>
+    </start>
+</grammar>

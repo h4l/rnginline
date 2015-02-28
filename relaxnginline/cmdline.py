@@ -2,7 +2,8 @@
 Flatten a hierachy of RELAX NG schemas into a single schema by recursively
 inlining <include>/<externalRef> elements.
 
-usage: relaxnginline [options] (<rng-src> | --stdin) [<rng-output>]
+usage: relaxnginline [options] <rng-src> [<rng-output>]
+       relaxnginline [options] --stdin [<rng-output>]
 
 options:
     <rng-src>
@@ -74,12 +75,12 @@ def py2_decode_bytes(cmdline_argument):
 def parse_stdin():
     stdin = sys.stdin.buffer if six.PY3 else sys.stdin
     try:
-        xml = etree.parse(stdin, base_url=None)
+        xml = etree.parse(stdin, base_url="")
     except etree.ParseError as cause:
             err = ParseError("Unable to parse <stdin> as XML. error: {0}"
                              .format(cause))
             six.raise_from(err, cause)
-    assert xml.base is None
+    assert xml.docinfo.URL is None, xml.docinfo.URL
     return xml
 
 
@@ -92,7 +93,7 @@ def _main(args):
     outfile = py2_decode_bytes(args["<rng-output>"])
 
     if outfile is None or outfile == "-":
-        outfile = sys.stdin.buffer if six.PY3 else sys.stdout
+        outfile = sys.stdout.buffer if six.PY3 else sys.stdout
 
     default_base_uri = None
     if args["--default-base-uri"]:
