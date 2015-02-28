@@ -1,0 +1,27 @@
+<grammar xmlns="http://relaxng.org/ns/structure/1.0" xmlns:e="expected">
+    <div datatypeLibrary="baz">
+        <div>
+            <define name="bob">
+                <element name="c">
+                    <data type="radish" e:expected="baz"/>
+                </element>
+            </define>
+        </div>
+    </div>
+    <start>
+        <element datatypeLibrary="bar" name="a" xmlns="http://relaxng.org/ns/structure/1.0">
+            <element name="b">
+                <data type="donkey" e:expected="bar"/>
+            </element>
+            <group>
+                <element name="c">
+                    <data type="widget" datatypeLibrary="pie" e:expected="pie"/>
+                </element>
+            </group>
+            <ref name="bob"/>
+            <element name="jim" datatypeLibrary="lol">
+                <value type="fooble" e:expected="lol">hi</value>
+            </element>
+        </element>
+    </start>
+</grammar>

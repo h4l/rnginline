@@ -1,7 +1,14 @@
+from relaxnginline import etree
+
 from relaxnginline.constants import NSMAP, RNG_DATA_TAG, RNG_VALUE_TAG
 
 
 __all__ = ["datatypelibrary"]
+
+_lookup_datatype_library = etree.XPath(
+    "string(ancestor-or-self::*[@datatypeLibrary][position()=1]"
+    "/@datatypeLibrary)")
+_data_value_els = etree.XPath("//rng:data|//rng:value", namespaces=NSMAP)
 
 
 class PropagateDatatypeLibraryPostProcess(object):
@@ -16,11 +23,7 @@ class PropagateDatatypeLibraryPostProcess(object):
     """
 
     def lookup_datatypelibrary(self, element):
-        while element is not None:
-            if "datatypeLibrary" in element.attrib:
-                return element.attrib["datatypeLibrary"]
-            element = element.getparent()
-        return ""
+        return _lookup_datatype_library(element)
 
     def resolve_datatypelibrary(self, element):
         lib = self.lookup_datatypelibrary(element)
@@ -28,8 +31,7 @@ class PropagateDatatypeLibraryPostProcess(object):
 
     def postprocess(self, grammar):
         # Resolve the datatypeLibrary of all data and value elements
-        for element in grammar.xpath("//rng:data|//rng:value",
-                                     namespaces=NSMAP):
+        for element in _data_value_els(grammar):
             self.resolve_datatypelibrary(element)
 
         # Strip datatypeLibrary from all other elements

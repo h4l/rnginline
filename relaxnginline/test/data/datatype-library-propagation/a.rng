@@ -1,0 +1,4 @@
+<element datatypeLibrary="blah" name="foo" xmlns="http://relaxng.org/ns/structure/1.0"
+         xmlns:e="expected">
+    <data type="double" e:expected="blah"/>
+</element>
