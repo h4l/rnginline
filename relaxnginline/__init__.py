@@ -8,10 +8,12 @@ import copy
 import os
 from os import path
 import uuid
+from functools import reduce
+import operator
 
 from lxml import etree
 import six
-from six.moves.urllib import parse
+
 from relaxnginline import postprocess, uri, urlhandlers
 
 from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
@@ -44,15 +46,16 @@ RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
 
 _etree = etree  # maintain access to etree in methods w/ etree param.
 
-def inline(src=None, etree=None, url=None, path=None, handlers=None,
-           postprocessors=None, create_validator=True, default_base_uri=None,
-           inliner=None):
+def inline(src=None, etree=None, url=None, path=None, file=None, handlers=None,
+           postprocessors=None, create_validator=True, base_uri=None,
+           default_base_uri=None, inliner=None):
 
     inliner_cls = Inliner if inliner is None else inliner
 
     inliner_obj = inliner_cls(handlers=handlers, postprocessors=postprocessors,
                               default_base_uri=default_base_uri)
     return inliner_obj.inline(src=src, etree=etree, url=url, path=path,
+                              file=file, base_uri=base_uri,
                               create_validator=create_validator)
 
 
@@ -242,8 +245,8 @@ class Inliner(object):
         # explicitly disabled our workaround to protect them from it.
         return etree.RelaxNG(schema)
 
-    def inline(self, src=None, etree=None, url=None, path=None,
-               create_validator=True):
+    def inline(self, src=None, etree=None, url=None, path=None, file=None,
+               base_uri=None, create_validator=True):
         """
         Load an XML document containing a RELAX NG schema, recursively loading
         and inlining any <include>/<externalRef> elements to form a complete
@@ -255,10 +258,14 @@ class Inliner(object):
 
         Args:
             src: The source to load the schema from. Either an lxml.etree
-                Element, a URL or a filesystem path.
+                Element, a URL, filesystem path or file-like object.
             etree: Explicitly provide an lxml.etree Element as the source
             url: Explicitly provide a URL as the source
             path: Explicitly provide a path as the source
+            file: Explicitly provide a file-like as the source
+            base_uri: A URI to override the base URI of the grammar with.
+                      Useful when the source doesn't have a sensible base URI,
+                      e.g. passing sys.stdin as a file.
             create_validator: If True, an lxml RelaxNG validator is created
                 from the loaded XML document and returned. If False then the
                 loaded XML is returned.
@@ -269,10 +276,12 @@ class Inliner(object):
             A RelaxngInlineError (or subclass) is raised if the schema can't be
             loaded.
         """
-        arg_count = sum(1 if arg else 0 for arg in [src, etree, url, path])
+        arg_count = reduce(operator.add, (arg is not None for arg in
+                                          [src, etree, url, path, file]))
         if arg_count != 1:
             raise ValueError("A single argument must be provided from src, "
-                             "etree, url or path. got {0:d}".format(arg_count))
+                             "etree, url, path or file. got {0:d}"
+                             .format(arg_count))
 
         if src is not None:
             # lxml.etree Element
@@ -286,6 +295,8 @@ class Inliner(object):
                     url = src
                 else:
                     path = src
+            elif hasattr(src, "read"):
+                file = src
             else:
                 raise ValueError(
                     "Don't know how to use src: {0!r}".format(src))
@@ -295,6 +306,14 @@ class Inliner(object):
         if path is not None:
             assert url is None and etree is None
             url = urlhandlers.construct_file_url(path)
+
+        if file is not None:
+            assert etree is None
+            # Note that the file.name attr is purposefully ignored as it's not
+            # possible in the general case to know whether it's a filename/path
+            # or some other indicator like <stdin> or a file descriptor number.
+            # base_uri can be used to safely provide a base URI.
+            etree = self.parse_grammar_xml(file.read(), None)
 
         context = InlineContext()
 
@@ -313,6 +332,13 @@ class Inliner(object):
             etree = self.dereference_url(absolute_url, context)
 
         assert etree is not None
+        assert _etree.iselement(etree)
+
+        if base_uri is not None:
+            if not uri.is_uri_reference(base_uri):
+                raise ValueError("base_uri is not a valid URI-reference: {0}"
+                                 .format(base_uri))
+            etree.getroottree().docinfo.URL = base_uri
 
         if grammar_provided_directly:
             # The XML to inline was directly provided, so we'll need to

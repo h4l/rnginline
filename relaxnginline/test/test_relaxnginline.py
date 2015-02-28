@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import re
+import io
 
 from lxml import etree
 import pytest
@@ -305,7 +306,7 @@ def test_override_default_base_uri():
     assert schema(xml)
 
 
-def test_overridden_base_uri_must_be_absolute():
+def test_overridden_default_base_uri_must_be_absolute():
     """
     The default base URI must be an absolute URI. i.e. matches the URI grammar,
     not the URI-reference grammar.
@@ -316,6 +317,42 @@ def test_overridden_base_uri_must_be_absolute():
 
     with pytest.raises(ValueError):
         relaxnginline.Inliner(default_base_uri=relative_uri)
+
+
+def test_provide_base_uri():
+    """
+    This tests manually specifying a base URI to use for the source.
+    """
+    handler = PackageDataUrlHandler()
+    base_uri = construct_py_pkg_data_url(TESTPKG,
+                                         "data/testcases/xml-base/schema.rng")
+    # Use a file object so that the inliner won't know the URI of the src
+    fileobj = io.BytesIO(handler.dereference(base_uri))
+
+    schema = relaxnginline.inline(fileobj, base_uri=base_uri,
+                                  # our base URI is absolute, so the default
+                                  # base won't have any effect.
+                                  default_base_uri="x:/blah")
+
+    xml_url = uri.resolve(base_uri, "positive-1.xml")
+    xml = etree.fromstring(handler.dereference(xml_url))
+
+    assert schema(xml)
+
+
+def test_overridden_base_uri_must_be_uri_ref():
+    """
+    The base URI, if specified, must match the URI-reference grammar. i.e. it
+    is a relative or absolute URI.
+    """
+    bad_uri = "x:/some/path/spaces not allowed/oops"
+    assert not uri.is_uri_reference(bad_uri)
+
+    with pytest.raises(ValueError):
+        relaxnginline.inline(
+            # some random schema, not of any significance
+            uri.resolve(DATA_URI, "testcases/include-1/schema.rng"),
+            base_uri=bad_uri)
 
 
 def test_unhandleable_url_raises_error():
