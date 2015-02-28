@@ -54,6 +54,7 @@ def test_fs_handler_reads_file_at_url():
     url = construct_file_url(path)
     result = FilesystemUrlHandler().dereference(parse.urlsplit(url))
     assert result == contents
+    os.unlink(path)
 
 
 data_data_data_uri = ("pypkgdata://relaxnginline.test/data/"
