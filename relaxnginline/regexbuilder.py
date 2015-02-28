@@ -63,7 +63,10 @@ class BaseSequence(Regex):
         return ""
 
     def render_expression(self, e):
-        return e.render_singular()
+        # In a sequence of expressions, each expression doesn't need to be
+        # singular to maintain its semantics, but the expression can't affect
+        # the semantics of its neighbors.
+        return e.render_non_expansive()
 
     def render(self):
         return self.get_operator().join(
@@ -71,11 +74,7 @@ class BaseSequence(Regex):
 
 
 class Sequence(BaseSequence):
-    def render_expression(self, e):
-        # In a sequence of expressions, each expression doesn't need to be
-        # singular to maintain its semantics, but the expression can't affect
-        # the semantics of its neighbors.
-        return e.render_non_expansive()
+    pass
 
 
 class Literal(Regex):
@@ -92,7 +91,7 @@ class Literal(Regex):
 
     def render(self):
         return "".join(
-            re.escape(char) if char in self._reserved_chars else char
+            re.escape(char) if self.needs_escape(char) else char
             for char in self.text)
 
     @classmethod
@@ -103,7 +102,8 @@ class Literal(Regex):
         this will create (and match) surrogate pairs for code points above the
         BMP.
         """
-        return cls("\\U{0:08X}".format(code_point).decode("unicode_escape"))
+        return cls("\\U{0:08X}".format(code_point)
+                   .encode("ascii").decode("unicode_escape"))
 
 
 class Choice(BaseSequence):
@@ -212,14 +212,14 @@ class SetRange(object):
         Args:
             is_first: True if this is the first range in the set
         """
-        if self.start == self.end:
+        if self.is_single():
             return self.render_char(self.start, is_first)
         else:
             return "{0}-{1}".format(self.render_char(self.start, is_first),
                                     self.render_char(self.end, False))
 
     def intersects(self, range):
-        start, end = range
+        start, end = range.start, range.end
         ends_before = self.end < start
         starts_after = self.start > end
         return (not ends_before) and (not starts_after)
@@ -308,6 +308,10 @@ class Start(StandAlone):
 
 class End(StandAlone):
     representation = "$"
+
+
+class Whitespace(StandAlone):
+    representation = r"\s"
 
 
 NAME = re.compile(r"^[a-zA-Z_]\w*$")

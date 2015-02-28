@@ -2,14 +2,13 @@ from __future__ import unicode_literals
 
 from copy import copy
 
-from six.moves import urllib
-
 import pytest
 import six
 
 from relaxnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
                                         Choice, Capture, Sequence, Repeat,
-                                        Optional, Start, End)
+                                        Optional, Start, End, SetRange,
+                                        Whitespace)
 
 
 class _TestString(object):
@@ -91,6 +90,8 @@ ts = _TestString
     tc(Literal("foo"), ts("foo"), ~ts("afoo")),
     tc(Literal("".join(six.unichr(x) for x in range(256))),
        "".join(six.unichr(x) for x in range(256))),
+    tc(Literal.from_codepoint(0x10155), ts("\U00010155")),
+    tc(Literal.from_codepoint(ord("x")), ts("x")),
 
     tc(OneOrMore(Literal("a")), ~ts(""), "a", "aa", "aaa", "aaaaaaaaaaaaaaa"),
     tc(ZeroOrMore(Literal("a")), "", "a", "aa", "aaa", "aaaaaaaaaaaaaa"),
@@ -99,6 +100,7 @@ ts = _TestString
     tc(Set("^"), "^", ~ts("a"), ~ts("")),
     tc(Set("]"), "]", ~ts("a"), ~ts("")),
     tc(Set("\\"), "\\", ~ts("a"), ~ts("")),
+    tc(Set(SetRange.create(SetRange.create(ord("x")))), "x"),
 
     tc(OneOrMore(Set(("a", "f"))), "abcdef", "fedcba", "aa", "fdf"),
     # Nested Sets
@@ -107,9 +109,13 @@ ts = _TestString
     tc(Choice(Literal("foo"), Literal("bar")), "foo", "bar", ~ts("foobar")),
 
     tc(Capture(Literal("foo")), ts("foo", groups=("foo",))),
+    tc(Optional(Capture(Literal("foo"))),
+       ts("foo", groups=("foo",)), ts("", groups=(None,))),
     tc(Sequence(Capture(Literal("foo")), Literal(":"),
                 Capture(Literal("bar"))),
        ts("foo:bar", groups=("foo", "bar"))),
+    tc(Choice(Capture(Literal("foo")), Capture(Literal("bar"))),
+       ts("foo", groups=("foo", None)), ts("bar", groups=(None, "bar"))),
 
     tc(Repeat(Literal("abc"), count=3), "abcabcabc", ~ts("abcabc"),
        ~ts("abcabcabcabc")),
@@ -133,6 +139,57 @@ ts = _TestString
         Capture(OneOrMore(Set("b")), name="bar")),
        ts("aaaabb", groupdict=dict(foo="aaaa", bar="bb"))),
 
+    tc(ZeroOrMore(Whitespace()),
+       "", "  ", "\t\t  \t")
+
 ])
 def test_regex_builder_node(test_case):
     test_case.run()
+
+
+def test_capture_name_must_by_python_name():
+    with pytest.raises(ValueError):
+        Capture(Literal("lol"), name="foo-bar")  # hyphen not allowed in names
+
+
+def test_capture_rejects_unknown_kwargs():
+    with pytest.raises(ValueError):
+        Capture(Literal("lol"), foo="bar")  # unrecognised keyword arg
+
+
+def test_set_cannot_be_empty():
+    with pytest.raises(ValueError):
+        Set()
+
+
+def test_set_range_cannot_be_reversed():
+    with pytest.raises(ValueError):
+        SetRange(20, 10)
+
+
+def test_set_range_create_rejects_unknown_args():
+    with pytest.raises(ValueError):
+        SetRange.create([1, 2, 3])
+
+
+@pytest.mark.parametrize("a,b,intersects", [
+    (SetRange(3, 3), SetRange(3, 3), True),
+    (SetRange(3, 3), SetRange(4, 4), False),
+
+    (SetRange(100, 110), SetRange(110, 120), True),
+    (SetRange(110, 120), SetRange(100, 110), True),
+
+    (SetRange(50, 100), SetRange(40, 60), True),
+    (SetRange(40, 60), SetRange(50, 100), True),
+
+    (SetRange(70, 80), SetRange(50, 100), True),
+    (SetRange(50, 100), SetRange(70, 80), True)
+])
+def test_set_range_intersects(a, b, intersects):
+    assert a.intersects(b) == intersects
+
+
+def test_repr():
+    expr = Choice(Literal("foo"), Repeat(Literal("bar"), min=3, max=8))
+    assert "Choice" in repr(expr)
+    assert "foo|(?:bar){3,8}" in repr(expr)
