@@ -24,6 +24,14 @@ from relaxnginline.test.test_relaxnginline import (
     test_testcases_testcases, ttt_ids)
 
 
+def _code(sysexit):
+    # For some py.test's ExceptionInfo objects in Py26 have an int for the
+    # .value attr instead of the actual exception.
+    if isinstance(sysexit, int):
+        return sysexit
+    return sysexit.code
+
+
 @contextmanager
 def change_dir(path):
     old_cwd = _get_cwd()
@@ -173,7 +181,7 @@ def test_cmdline_rejects_invalid_base_uri(base_uri_arg, monkeypatch):
         rng_main(argv=_cmdline_args([base_uri_arg, bad_uri, "/dev/null"]))
     stderr.seek(0)
 
-    assert excinfo.value.code == 1
+    assert _code(excinfo.value) == 1
     assert "base-uri" in stderr.read()
 
 
