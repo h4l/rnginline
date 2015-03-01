@@ -180,3 +180,8 @@ from relaxnginline import uri_regex as ur
 ])
 def test_uri_regex(test_case):
     test_case.run()
+
+
+def test_get_regex_raises_on_unknown_name():
+    with pytest.raises(ValueError):
+        ur.get_regex("fjalksdjflas")
