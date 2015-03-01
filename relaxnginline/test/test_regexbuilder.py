@@ -12,7 +12,8 @@ from relaxnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
 
 
 class _TestString(object):
-    def __init__(self, string, groups=None, groupdict=None, length=None, should_match=True):
+    def __init__(self, string, groups=None, groupdict=None, length=None,
+                 should_match=True):
         self.string = string
         self.groups = groups
         self.groupdict = groupdict

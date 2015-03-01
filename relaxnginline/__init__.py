@@ -32,11 +32,11 @@ __all__ = ["inline", "Inliner", ]
 # in values of href attrs before using them as URIs:
 NOT_ESCAPED = "".join(chr(x) for x in
                       # ASCII are OK
-                      set(range(128))
+                      set(range(128)) -
                       # But not control chars
-                      - set(range(0, 31))
+                      set(range(0, 31)) -
                       # And not these reserved chars
-                      - set(ord(c) for c in " <>\"{}|\\^`"))
+                      set(ord(c) for c in " <>\"{}|\\^`"))
 # Matches chars which must be escaped in href attrs
 NEEDS_ESCAPE_RE = re.compile("[^{0}]"
                              .format(re.escape(NOT_ESCAPED)).encode("ascii"))
@@ -45,6 +45,7 @@ RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
     pkgutil.get_data("relaxnginline", "relaxng.rng")))
 
 _etree = etree  # maintain access to etree in methods w/ etree param.
+
 
 def inline(src=None, etree=None, url=None, path=None, file=None, handlers=None,
            postprocessors=None, create_validator=True, base_uri=None,
@@ -378,7 +379,7 @@ class Inliner(object):
         url = self._get_href_url(include)
 
         grammar_dxi = self._inline(self.dereference_url(url, context), context,
-                               trigger_el=include)
+                                   trigger_el=include)
         grammar = grammar_dxi.get_root_el()
 
         # The included grammar's root element must be a grammar (unlike
@@ -487,7 +488,7 @@ class Inliner(object):
         url = self._get_href_url(ref)
 
         grammar_dxi = self._inline(self.dereference_url(url, context), context,
-                               trigger_el=ref)
+                                   trigger_el=ref)
         grammar = grammar_dxi.get_root_el()
 
         # datatypeLibrary: The datatypeLibrary is not inherited into an
@@ -697,6 +698,7 @@ class DeferredXmlInsertion(object):
 
         return root_xml
 
+
 def _escape_match(match):
     char = match.group()
     assert len(char) == 1
@@ -707,6 +709,7 @@ def _escape_match(match):
 def escape_reserved_characters(url):
     utf8 = url.encode("utf-8")
     return NEEDS_ESCAPE_RE.sub(_escape_match, utf8).decode("ascii")
+
 
 def _get_cwd():
     # Six doesn't currently handle this difference between Py 2 and 3:

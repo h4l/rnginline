@@ -10,7 +10,7 @@ from relaxnginline import uri_regex as ur
 @pytest.mark.parametrize("test_case", [
     tc(ur.DIGIT, ~ts("a"), ~ts("x"), *list("0123456789")),
     tc(ur.ALPHA, ~ts("9"), ~ts("0"), *list("abcdefghijklmnopqrstuvwxyz"
-                                             "ABCDEFGHIJKLMNOPQRSTUVWXYZ")),
+                                           "ABCDEFGHIJKLMNOPQRSTUVWXYZ")),
     tc(ur.HEXDIG, ~ts("g"), ~ts("z"), *list("abcdefABCDEF0123456789")),
 
     tc(ur.sub_delims, ~ts("g"), ~ts("z"), *list("!$&'()*+,;=")),
@@ -120,8 +120,7 @@ from relaxnginline import uri_regex as ur
        "1:2:3:4::",
        "1:2:3:4:5::",
        "1:2:3:4:5:6::",
-       "1:2:3:4:5:6:7::"
-    ),
+       "1:2:3:4:5:6:7::"),
 
     tc(ur.ipv6address,
        "2001:0db8:0000:0000:0000:ff00:0042:8329",

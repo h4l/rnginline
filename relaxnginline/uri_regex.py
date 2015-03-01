@@ -144,8 +144,7 @@ relative_part = Choice(
 
 relative_ref = Sequence(relative_part,
                         Optional(Sequence(Literal("?"), query)),
-                        Optional(Sequence(Literal("#"), fragment))
-)
+                        Optional(Sequence(Literal("#"), fragment)))
 
 hier_part = Choice(
     Sequence(Literal("//"), authority, path_abempty),
@@ -214,8 +213,8 @@ def get_regex(rule_name):
     Get a compiled regex which matches an entire string against the named rule
     from RFC 3986.
     """
-    if not rule_name in _compiled_rule_cache:
-        if not rule_name in _rfc_names:
+    if rule_name not in _compiled_rule_cache:
+        if rule_name not in _rfc_names:
             raise ValueError("Unknown rule name: {0}".format(rule_name))
         rule = _rfc_names[rule_name]
         # Need to place the rule between ^ and $ anchors, as the rules can't

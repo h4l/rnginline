@@ -11,12 +11,12 @@ def test_urllib_urljoin_does_not_work_for_us():
     """The reason for the uri module to exist."""
 
     # bad
-    assert (urllib.parse.urljoin("custom://a/b/c/foo.txt", "bar.txt")
-            == "bar.txt")  # Not what I'd expect
+    assert (urllib.parse.urljoin("custom://a/b/c/foo.txt", "bar.txt") ==
+            "bar.txt")  # Not what I'd expect
 
     # good!
-    assert (uri.resolve("custom://a/b/c/foo.txt", "bar.txt")
-            == "custom://a/b/c/bar.txt")  # What I'd expect
+    assert (uri.resolve("custom://a/b/c/foo.txt", "bar.txt") ==
+            "custom://a/b/c/bar.txt")  # What I'd expect
 
 
 def test_urllib_parsing_is_not_that_great():
@@ -37,6 +37,7 @@ def test_urllib_urlunsplit_adds_empty_netloc_on_file_urls():
 
 # The test cases all resolve against this base
 BASE = ("http://a/b/c/d;p?q",)
+
 
 # a relative reference is transformed to its target URI as follows.
 @pytest.mark.parametrize("base,reference,target", [

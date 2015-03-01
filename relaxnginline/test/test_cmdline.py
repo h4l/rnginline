@@ -112,7 +112,7 @@ def test_cmdline(testcase_dir, schema_file, test_file, should_match):
             pytest.fail("{0} shouldn't match {1} but did"
                         .format(test_file, schema_file))
 
-# TODO: test running from cwd w/ odd unicode
+
 def test_cmdline_from_non_ascii_dir(testcase_dir):
     schema = _external_path(testcase_dir, "data/testcases/xml-base/schema.rng")
     xml = _external_path(testcase_dir,
@@ -129,7 +129,6 @@ def test_cmdline_from_non_ascii_dir(testcase_dir):
 
         os.unlink(inlined_schema)
     os.rmdir(new_dir)
-
 
 
 @pytest.mark.parametrize("base_arg",
@@ -192,6 +191,7 @@ def test_cmdline_traceback_produces_traceback(monkeypatch):
     # Patch stdin to blow up when read is called
     class MyTestingRngError(RelaxngInlineError):
         pass
+
     class Boomer(object):
         def read(self):
             raise MyTestingRngError("boom!")
@@ -199,7 +199,7 @@ def test_cmdline_traceback_produces_traceback(monkeypatch):
     stdin.buffer = stdin  # emulate sys.stdin.buffer for Py 3
     monkeypatch.setattr("sys.stdin", stdin)
 
-    with pytest.raises(SystemExit) as excinfo:
+    with pytest.raises(SystemExit):
         rng_main(argv=_cmdline_args(["--traceback", "--stdin"]))
     stderr.seek(0)
 

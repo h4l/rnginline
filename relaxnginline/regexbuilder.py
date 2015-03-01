@@ -315,6 +315,8 @@ class Whitespace(StandAlone):
 
 
 NAME = re.compile(r"^[a-zA-Z_]\w*$")
+
+
 def is_name(string):
     """Returns: True if string is a Python name/identifier."""
     return bool(NAME.match(string))

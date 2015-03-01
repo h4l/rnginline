@@ -1,5 +1,15 @@
 from __future__ import unicode_literals, print_function
 
+import sys
+import locale
+
+import docopt
+import six
+
+from relaxnginline import (__version__, inline, uri)
+from relaxnginline.exceptions import RelaxngInlineError
+
+
 # Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
 __doc__ = DOC = """
 Flatten a hierachy of RELAX NG schemas into a single schema by recursively
@@ -54,16 +64,6 @@ advanced options:
         <include>/<externalRef> elements. Note that <URI> must be a an absolute
         URI with a scheme, not a URI-reference.
 """
-
-import sys
-import locale
-
-import docopt
-import six
-from lxml import etree
-
-from relaxnginline import (__version__, inline, uri)
-from relaxnginline.exceptions import ParseError, RelaxngInlineError
 
 
 def py2_decode_bytes(cmdline_argument):

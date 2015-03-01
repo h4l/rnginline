@@ -194,4 +194,3 @@ class PackageDataUrlHandler(object):
 
 def get_default_handlers():
     return [FilesystemUrlHandler(), PackageDataUrlHandler()]
-

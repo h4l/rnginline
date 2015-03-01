@@ -12,12 +12,16 @@ from relaxnginline.urlhandlers import PackageDataUrlHandler, \
 
 
 @pytest.mark.parametrize("xml,expected", [
-    ("""<a datatypeLibrary="a"><b><c id="start"/></b></a>""", "a"),
-    ("""<a datatypeLibrary="a"><b><c datatypeLibrary="c" id="start"/></b></a>""", "c"),
-    ("""<a datatypeLibrary="a"><b datatypeLibrary="b"><c id="start"/></b></a>""", "b"),
-    ("""<a datatypeLibrary="a"><b><c datatypeLibrary="c" id="start"/></b></a>""", "c"),
-    ("""<a datatypeLibrary="a"><b><c datatypeLibrary="" id="start"/></b></a>""", ""),
-    ("""<a><b><c id="start"/></b></a>""", ""),
+    ('<a datatypeLibrary="a"><b><c id="start"/></b></a>', "a"),
+    ('<a datatypeLibrary="a"><b><c datatypeLibrary="c" id="start"/></b></a>',
+     "c"),
+    ('<a datatypeLibrary="a"><b datatypeLibrary="b"><c id="start"/></b></a>',
+     "b"),
+    ('<a datatypeLibrary="a"><b><c datatypeLibrary="c" id="start"/></b></a>',
+     "c"),
+    ('<a datatypeLibrary="a"><b><c datatypeLibrary="" id="start"/></b></a>',
+     ""),
+    ('<a><b><c id="start"/></b></a>', ""),
 ])
 def test_lookup_datatypelibrary(xml, expected):
     root = etree.XML(xml)

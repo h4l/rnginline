@@ -36,8 +36,8 @@ class PropagateDatatypeLibraryPostProcess(object):
 
         # Strip datatypeLibrary from all other elements
         for element in grammar.iter():
-            if (element.tag not in [RNG_DATA_TAG, RNG_VALUE_TAG]
-                    and "datatypeLibrary" in element.attrib):
+            if (element.tag not in [RNG_DATA_TAG, RNG_VALUE_TAG] and
+                    "datatypeLibrary" in element.attrib):
                 del element.attrib["datatypeLibrary"]
 
         return grammar

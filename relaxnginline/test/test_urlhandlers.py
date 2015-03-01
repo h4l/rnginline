@@ -181,6 +181,7 @@ def test_pypkgdata_handler_dereferences_to_correct_data():
 
     assert data.decode("utf-8") == data_data_data
 
+
 @pytest.mark.parametrize("url", [
     construct_py_pkg_data_url("relaxnginline.tset", "data"),  # dir, not file
     construct_py_pkg_data_url("relaxnginline.tset", "data/jfklsjflsdf.txt")

@@ -41,8 +41,8 @@ def _load_testcases():
                           if re.match("^negative.*\.xml$", f)]
 
         assert positive_cases
-        assert not [f for files in [[schema], positive_cases, negative_cases]
-                    for f in files if not pr.resource_exists(__name__, f)]
+        assert not [f for _files in [[schema], positive_cases, negative_cases]
+                    for f in _files if not pr.resource_exists(__name__, f)]
 
         for file in positive_cases:
             testcases.append((schema, file, True))
@@ -113,7 +113,8 @@ def _testcase_id(tc):
 
 
 test_testcases_testcases = _load_testcases()
-ttt_ids =[_testcase_id(tc) for tc in test_testcases_testcases]
+ttt_ids = [_testcase_id(tc) for tc in test_testcases_testcases]
+
 
 @pytest.mark.parametrize("schema_file,test_file,should_match",
                          test_testcases_testcases, ids=ttt_ids)
@@ -127,7 +128,7 @@ def test_testcases(schema_file, test_file, should_match):
         try:
             # Should match
             schema.assertValid(xml)
-        except etree.DocumentInvalid as e:
+        except etree.DocumentInvalid:
             pytest.fail("{0} should match {1} but didn't: {2}"
                         .format(test_file, schema_file, schema.error_log))
     else:
@@ -190,8 +191,8 @@ def test_deferred_xml_insertion__replace_root_can_only_happen_once():
     dxi = DeferredXmlInsertion(a)
     dxi.register_replace(a, c)
 
-    # We don't allow the root to be replaced twice. Mainly because we never need
-    # to, so it would indicate an error.
+    # We don't allow the root to be replaced twice. Mainly because we never
+    # need to, so it would indicate an error.
     with pytest.raises(ValueError):
         dxi.register_replace(a, d)
 
@@ -203,10 +204,11 @@ def test_deferred_xml_insertion__perform_insertions_can_only_happen_once():
 
     dxi = DeferredXmlInsertion(a)
     dxi.register_replace(b, c)
-    xml = dxi.perform_insertions()
+
+    dxi.perform_insertions()  # first time
     # We don't allow insertions to be performed twice, as it's never necessary
     with pytest.raises(AssertionError):
-        dxi.perform_insertions()
+        dxi.perform_insertions()  # second time
 
 
 def test_foreign_attrs_cant_be_in_default_ns():
@@ -390,7 +392,7 @@ def test_calling_inline_with_0_args_raises_value_error():
 def test_inline_etree_el_with_no_base_uri_uses_default_base_uri():
     handler = PackageDataUrlHandler()
     base_url = construct_py_pkg_data_url(TESTPKG,
-                                        "data/testcases/xml-base/")
+                                         "data/testcases/xml-base/")
     schema_bytes = handler.dereference(uri.resolve(base_url, "schema.rng"))
 
     schema_el = etree.fromstring(schema_bytes)
@@ -478,14 +480,6 @@ def test_context_pop_with_no_context_raises_error():
         context._pop_context("x:/url", None)
 
 
-def test_context_pop_with_no_context_raises_error():
-    context = relaxnginline.InlineContext()
-
-    with pytest.raises(ValueError):
-        context._pop_context("x:/url", None)
-
-
-
 def test_context_pop_with_mismatching_url_raises_error():
     context = relaxnginline.InlineContext()
     token = context._push_context("x:/foo", None)
@@ -498,7 +492,7 @@ def test_context_pop_with_mismatching_url_raises_error():
 def test_context_pop_with_mismatching_token_raises_error():
     context = relaxnginline.InlineContext()
     url = "x:/foo"
-    token = context._push_context(url, None)
+    context._push_context(url, None)  # Ignore the returned token
 
     with pytest.raises(ValueError):
         # different token to push call
