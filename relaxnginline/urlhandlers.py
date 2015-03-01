@@ -80,7 +80,7 @@ def unquote(uri_encoded_text, unquoting_func=parse.unquote):
 
 def construct_file_url(file_path, base="file:"):
     """
-    Create a file:// URL pointing to the filesystem path file_path.
+    Create a file: URL pointing to the filesystem path file_path.
     """
     reject_bytes(file_path=file_path)
 
