@@ -12,9 +12,7 @@ import mock
 import relaxnginline
 from relaxnginline import DeferredXmlInsertion, uri
 
-from relaxnginline.urlhandlers import (
-    construct_py_pkg_data_url, PackageDataUrlHandler, FilesystemUrlHandler,
-    construct_file_url)
+from relaxnginline import urlhandlers
 
 from relaxnginline.exceptions import (
     InvalidGrammarError, SchemaIncludesSelfError, NoAvailableHandlerError,
@@ -23,7 +21,7 @@ from relaxnginline.exceptions import (
 
 TESTPKG = "relaxnginline.test"
 
-DATA_URI = construct_py_pkg_data_url(TESTPKG, "data/")
+DATA_URI = urlhandlers.pydata.makeurl(TESTPKG, "data/")
 
 
 def _load_testcases():
@@ -73,13 +71,13 @@ def test_include_cant_inline_non_grammar_elements():
     Verify that <include>s can't pull in a RNG file that doesn't start with a
     <grammar>.
     """
-    illegal_url = construct_py_pkg_data_url(
+    illegal_url = urlhandlers.pydata.makeurl(
         TESTPKG, "data/inline-non-grammar-els/illegal.rng")
 
     with pytest.raises(InvalidGrammarError):
         relaxnginline.inline(url=illegal_url)
 
-    legal_url = construct_py_pkg_data_url(
+    legal_url = urlhandlers.pydata.makeurl(
         TESTPKG, "data/inline-non-grammar-els/legal.rng")
     schema = relaxnginline.inline(url=legal_url)
 
@@ -91,7 +89,7 @@ def test_include_cant_inline_non_grammar_elements():
     "data/datatype-library-inheritance/base-external.rng"
 ])
 def test_inlined_files_dont_inherit_datatype(schema_path):
-    illegal_url = construct_py_pkg_data_url(TESTPKG, schema_path)
+    illegal_url = urlhandlers.pydata.makeurl(TESTPKG, schema_path)
 
     # Inlining will succeed
     grammar = relaxnginline.inline(url=illegal_url, create_validator=False)
@@ -120,7 +118,7 @@ ttt_ids = [_testcase_id(tc) for tc in test_testcases_testcases]
                          test_testcases_testcases, ids=ttt_ids)
 def test_testcases(schema_file, test_file, should_match):
     schema = relaxnginline.inline(
-        construct_py_pkg_data_url(TESTPKG, schema_file))
+        urlhandlers.pydata.makeurl(TESTPKG, schema_file))
 
     xml = etree.parse(pr.resource_stream(TESTPKG, test_file))
 
@@ -230,18 +228,18 @@ def test_foreign_attrs_cant_be_in_default_ns():
 def test_include_loops_trigger_error():
     with pytest.raises(SchemaIncludesSelfError):
         relaxnginline.inline(
-            url=construct_py_pkg_data_url(TESTPKG, "data/loops/start.rng"))
+            url=urlhandlers.pydata.makeurl(TESTPKG, "data/loops/start.rng"))
 
 
 def test_include_cant_override_start_if_no_start_in_included_file():
     with pytest.raises(InvalidGrammarError):
-        relaxnginline.inline(url=construct_py_pkg_data_url(
+        relaxnginline.inline(url=urlhandlers.pydata.makeurl(
             TESTPKG, "data/include-override-start/start.rng"))
 
 
 def test_include_cant_override_define_if_no_matching_define_in_included_file():
     with pytest.raises(InvalidGrammarError):
-        relaxnginline.inline(url=construct_py_pkg_data_url(
+        relaxnginline.inline(url=urlhandlers.pydata.makeurl(
             TESTPKG, "data/include-override-define/start.rng"))
 
 
@@ -282,11 +280,11 @@ def test_deferred_xml_insertion__insert(xml, index, expected):
 
 
 def test_multiple_references_to_same_uri_results_in_1_fetch():
-    handler = PackageDataUrlHandler()
+    handler = urlhandlers.PackageDataUrlHandler()
     # Mock the dereference method to allow calls to be observed
     handler.dereference = mock.Mock(side_effect=handler.dereference)
 
-    url = construct_py_pkg_data_url(
+    url = urlhandlers.pydata.makeurl(
         TESTPKG, "data/multiple-ref-1-fetch/schema.rng")
 
     relaxnginline.inline(url=url, handlers=[handler])
@@ -296,14 +294,13 @@ def test_multiple_references_to_same_uri_results_in_1_fetch():
 
 
 def test_override_default_base_uri():
-    default_base_uri = construct_py_pkg_data_url(TESTPKG,
-                                                 "data/testcases/xml-base/")
+    default_base_uri = urlhandlers.pydata.makeurl(TESTPKG,
+                                                  "data/testcases/xml-base/")
     schema = relaxnginline.inline(url="schema.rng",
                                   default_base_uri=default_base_uri)
 
-    h = PackageDataUrlHandler()
     xml_url = uri.resolve(default_base_uri, "positive-1.xml")
-    xml = etree.fromstring(h.dereference(xml_url))
+    xml = etree.fromstring(urlhandlers.pydata.dereference(xml_url))
 
     assert schema(xml)
 
@@ -325,11 +322,10 @@ def test_provide_base_uri():
     """
     This tests manually specifying a base URI to use for the source.
     """
-    handler = PackageDataUrlHandler()
-    base_uri = construct_py_pkg_data_url(TESTPKG,
-                                         "data/testcases/xml-base/schema.rng")
+    base_uri = urlhandlers.pydata.makeurl(TESTPKG,
+                                          "data/testcases/xml-base/schema.rng")
     # Use a file object so that the inliner won't know the URI of the src
-    fileobj = io.BytesIO(handler.dereference(base_uri))
+    fileobj = io.BytesIO(urlhandlers.pydata.dereference(base_uri))
 
     schema = relaxnginline.inline(fileobj, base_uri=base_uri,
                                   # our base URI is absolute, so the default
@@ -337,7 +333,7 @@ def test_provide_base_uri():
                                   default_base_uri="x:/blah")
 
     xml_url = uri.resolve(base_uri, "positive-1.xml")
-    xml = etree.fromstring(handler.dereference(xml_url))
+    xml = etree.fromstring(urlhandlers.pydata.dereference(xml_url))
 
     assert schema(xml)
 
@@ -373,13 +369,15 @@ def test_context_pushes_must_have_parents_except_first():
 
 
 def test_including_invalid_xml_file_raises_parse_error():
-    url = construct_py_pkg_data_url(TESTPKG, "data/include-invalid-xml/ok.rng")
+    url = urlhandlers.pydata.makeurl(TESTPKG,
+                                     "data/include-invalid-xml/ok.rng")
     with pytest.raises(ParseError):
         relaxnginline.inline(url=url)
 
 
 def test_including_non_rng_xml_file_raises_invalid_grammar_error():
-    url = construct_py_pkg_data_url(TESTPKG, "data/include-non-rng-xml/ok.rng")
+    url = urlhandlers.pydata.makeurl(TESTPKG,
+                                     "data/include-non-rng-xml/ok.rng")
     with pytest.raises(InvalidGrammarError):
         relaxnginline.inline(url=url)
 
@@ -390,10 +388,10 @@ def test_calling_inline_with_0_args_raises_value_error():
 
 
 def test_inline_etree_el_with_no_base_uri_uses_default_base_uri():
-    handler = PackageDataUrlHandler()
-    base_url = construct_py_pkg_data_url(TESTPKG,
-                                         "data/testcases/xml-base/")
-    schema_bytes = handler.dereference(uri.resolve(base_url, "schema.rng"))
+    base_url = urlhandlers.pydata.makeurl(TESTPKG,
+                                          "data/testcases/xml-base/")
+    schema_bytes = urlhandlers.pydata.dereference(
+        uri.resolve(base_url, "schema.rng"))
 
     schema_el = etree.fromstring(schema_bytes)
     assert schema_el.getroottree().docinfo.URL is None
@@ -408,14 +406,13 @@ def test_inline_etree_el_with_no_base_uri_uses_default_base_uri():
     # even though the XML document itself has no base URI
     schema = relaxnginline.inline(etree=schema_el, default_base_uri=base_url)
 
-    assert schema(etree.fromstring(handler.dereference(
+    assert schema(etree.fromstring(urlhandlers.pydata.dereference(
         uri.resolve(base_url, "positive-1.xml"))))
 
 
 def test_inline_args_etree_as_src():
-    handler = PackageDataUrlHandler()
     url = uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")
-    schema_el = etree.fromstring(handler.dereference(
+    schema_el = etree.fromstring(urlhandlers.pydata.dereference(
         uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")), base_url=url)
 
     assert etree.iselement(schema_el)
@@ -423,14 +420,13 @@ def test_inline_args_etree_as_src():
     # pass schema_el as src, should be detected as an Element
     schema = relaxnginline.inline(schema_el)
 
-    assert schema(etree.fromstring(handler.dereference(
+    assert schema(etree.fromstring(urlhandlers.pydata.dereference(
         uri.resolve(url, "positive-1.xml"))))
 
 
 def test_inline_args_etree_doc_as_src():
-    handler = PackageDataUrlHandler()
     url = uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")
-    schema_el = etree.fromstring(handler.dereference(
+    schema_el = etree.fromstring(urlhandlers.pydata.dereference(
         uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")), base_url=url)
 
     schema_root = schema_el.getroottree()
@@ -439,7 +435,7 @@ def test_inline_args_etree_doc_as_src():
     # pass etree document (not el) as src, should pull out root el and use it
     schema = relaxnginline.inline(schema_root)
 
-    assert schema(etree.fromstring(handler.dereference(
+    assert schema(etree.fromstring(urlhandlers.pydata.dereference(
         uri.resolve(url, "positive-1.xml"))))
 
 
@@ -458,13 +454,12 @@ def test_inline_args_fs_path_as_src():
     </element>
     """
     path = "/some/dir/Filename with spaces.rng"
-    handler = FilesystemUrlHandler()
+    handler = urlhandlers.FilesystemUrlHandler()
     handler.dereference = mock.Mock(side_effect=[grammar_xml])
 
     relaxnginline.inline(path, handlers=[handler])
 
-    handler.dereference.assert_called_once_with(
-        construct_file_url(path))
+    handler.dereference.assert_called_once_with(urlhandlers.file.makeurl(path))
 
 
 def test_inline_args_passing_garbage():

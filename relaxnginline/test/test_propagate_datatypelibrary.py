@@ -7,8 +7,7 @@ import pytest
 
 from relaxnginline.constants import NSMAP
 from relaxnginline.postprocess import datatypelibrary
-from relaxnginline.urlhandlers import PackageDataUrlHandler, \
-    construct_py_pkg_data_url
+from relaxnginline import urlhandlers
 
 
 @pytest.mark.parametrize("xml,expected", [
@@ -35,8 +34,8 @@ def test_lookup_datatypelibrary(xml, expected):
     "data/datatype-library-propagation/b.rng"
 ])
 def test_propagate_datatype_library(path):
-    url = construct_py_pkg_data_url("relaxnginline.test", path)
-    el = etree.XML(PackageDataUrlHandler().dereference(url))
+    url = urlhandlers.pydata.makeurl("relaxnginline.test", path)
+    el = etree.XML(urlhandlers.pydata.dereference(url))
 
     propagated = datatypelibrary(copy.deepcopy(el))
 

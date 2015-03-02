@@ -41,7 +41,7 @@ def resolve(base, reference, strict=True):
     "Relative Resolution".
 
     Note that urllib.urljoin does not work with non-standard schemes (like our
-    pypkgdata: scheme) hence this implementation...
+    pydata: scheme) hence this implementation...
     """
     if not is_uri(base):
         raise UriSyntaxError("base was not a valid URI: {0}".format(base))

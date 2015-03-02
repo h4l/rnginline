@@ -146,7 +146,7 @@ class Inliner(object):
         # segment will be dropped when resolve()ing.
         dir = path.join(_get_cwd(), "")
         assert dir.endswith("/")
-        return urlhandlers.construct_file_url(dir)
+        return urlhandlers.file.makeurl(dir)
 
     def get_default_postprocessors(self):
         return postprocess.get_default_postprocessors()
@@ -307,7 +307,7 @@ class Inliner(object):
 
         if path is not None:
             assert url is None and etree is None
-            url = urlhandlers.construct_file_url(path)
+            url = urlhandlers.file.makeurl(path)
 
         if file is not None:
             assert etree is None

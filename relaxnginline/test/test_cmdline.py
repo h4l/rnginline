@@ -16,9 +16,7 @@ from relaxnginline import _get_cwd
 from relaxnginline.cmdline import main as rng_main
 from relaxnginline.test.mini_validator import main as minival_main
 from relaxnginline.exceptions import RelaxngInlineError
-
-from relaxnginline.urlhandlers import (
-    PackageDataUrlHandler, construct_py_pkg_data_url, construct_file_url)
+from relaxnginline import urlhandlers
 
 from relaxnginline.test.test_relaxnginline import (
     test_testcases_testcases, ttt_ids)
@@ -142,14 +140,13 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
 
     schema_path = "data/testcases/xml-base/schema.rng"
 
-    handler = PackageDataUrlHandler()
-    schema_bytes = handler.dereference(
-        construct_py_pkg_data_url("relaxnginline.test", schema_path))
-    xml_bytes = handler.dereference(
-        construct_py_pkg_data_url("relaxnginline.test",
-                                  "data/testcases/xml-base/positive-1.xml"))
+    schema_bytes = urlhandlers.pydata.dereference(
+        urlhandlers.pydata.makeurl("relaxnginline.test", schema_path))
+    xml_bytes = urlhandlers.pydata.dereference(
+        urlhandlers.pydata.makeurl("relaxnginline.test",
+                                   "data/testcases/xml-base/positive-1.xml"))
 
-    base = construct_file_url(_external_path(testcase_dir, schema_path))
+    base = urlhandlers.file.makeurl(_external_path(testcase_dir, schema_path))
 
     new_stdin = six.BytesIO(schema_bytes)
     new_stdout = six.BytesIO()

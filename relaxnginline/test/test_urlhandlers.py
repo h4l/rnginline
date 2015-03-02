@@ -9,10 +9,8 @@ import six
 from six.moves.urllib import parse
 
 from relaxnginline.exceptions import DereferenceError
-from relaxnginline.urlhandlers import (
-    reject_bytes, ensure_parsed, quote, unquote, FilesystemUrlHandler,
-    PackageDataUrlHandler, construct_file_url, deconstruct_file_url,
-    construct_py_pkg_data_url, deconstruct_py_pkg_data_url)
+from relaxnginline.urlhandlers import (reject_bytes, ensure_parsed, quote,
+                                       unquote, file, pydata)
 
 
 def test_reject_bytes():
@@ -63,14 +61,14 @@ def test_quoting_roundtrip(text):
 ])
 def test_file_url_roundtrip(path, base, expected_url, expected_path):
     kwargs = {"base": base} if base is not None else {}
-    result_url = construct_file_url(path, **kwargs)
+    result_url = file.makeurl(path, **kwargs)
 
     assert isinstance(result_url, six.text_type)
     assert result_url == expected_url
 
     result_path = None
     try:
-        result_path = deconstruct_file_url(result_url)
+        result_path = file.breakurl(result_url)
         assert result_path is not None
     except ValueError as e:
         if expected_path is not None:
@@ -81,20 +79,18 @@ def test_file_url_roundtrip(path, base, expected_url, expected_path):
 
 
 def test_fs_handler_handles_file_uris():
-    fshandler = FilesystemUrlHandler()
-    assert fshandler.can_handle(parse.urlsplit("file:some/file"))
+    assert file.can_handle(parse.urlsplit("file:some/file"))
 
 
 def test_fs_handler_doesnt_handle_raw_paths():
-    fshandler = FilesystemUrlHandler()
-    assert not fshandler.can_handle(parse.urlsplit("some/file"))
+    assert not file.can_handle(parse.urlsplit("some/file"))
 
 
 def test_file_url_creates_file_urls():
-    file_url = construct_file_url("some/file/∑´^¨∂ƒ")
+    file_url = file.makeurl("some/file/∑´^¨∂ƒ")
     assert type(file_url) == six.text_type
     assert file_url == "file:some/file/%E2%88%91%C2%B4%5E%C2%A8%E2%88%82%C6%92"
-    assert deconstruct_file_url(file_url) == "some/file/∑´^¨∂ƒ"
+    assert file.breakurl(file_url) == "some/file/∑´^¨∂ƒ"
 
 
 def test_fs_handler_raises_dereference_error_on_missing_files():
@@ -102,9 +98,9 @@ def test_fs_handler_raises_dereference_error_on_missing_files():
     os.close(handle)
     os.unlink(path)
 
-    url = construct_file_url(path)
+    url = file.makeurl(path)
     with pytest.raises(DereferenceError) as e:
-        FilesystemUrlHandler().dereference(parse.urlsplit(url))
+        file.dereference(parse.urlsplit(url))
     assert url in six.text_type(e.value)
 
 
@@ -116,13 +112,13 @@ def test_fs_handler_reads_file_at_url():
     with os.fdopen(handle, "wb") as f:
         f.write(contents)
 
-    url = construct_file_url(path)
-    result = FilesystemUrlHandler().dereference(parse.urlsplit(url))
+    url = file.makeurl(path)
+    result = file.dereference(parse.urlsplit(url))
     assert result == contents
     os.unlink(path)
 
 
-data_data_data_uri = ("pypkgdata://relaxnginline.test/data/"
+data_data_data_uri = ("pydata://relaxnginline.test/data/"
                       "data-%C9%90%CA%87%C9%90p-data.txt")
 
 
@@ -136,56 +132,54 @@ BTW, this file is encoded in UTF-8.
 """
 
 
-def test_pypkgdata_uri_creation():
+def test_pydata_uri_creation():
     assert type(data_data_data_uri) == six.text_type
     package, path = "relaxnginline.test", "data/data-ɐʇɐp-data.txt"
-    created_url = construct_py_pkg_data_url(package, path)
+    created_url = pydata.makeurl(package, path)
 
     assert type(created_url) == six.text_type
     assert data_data_data_uri == created_url
-    assert deconstruct_py_pkg_data_url(created_url) == (package, path)
+    assert pydata.breakurl(created_url) == (package, path)
 
 
-def test_pypkgdata_path_must_be_relative():
+def test_pydata_path_must_be_relative():
     with pytest.raises(ValueError):
-        construct_py_pkg_data_url("foo", "/abs/path")
+        pydata.makeurl("foo", "/abs/path")
 
 
-def test_pypkgdata_package_name_must_be_python_name():
+def test_pydata_package_name_must_be_python_name():
     with pytest.raises(ValueError):
-        construct_py_pkg_data_url("ƒancy-name", "foo/bar")
+        pydata.makeurl("ƒancy-name", "foo/bar")
 
 
 @pytest.mark.skipif(six.PY3, reason="Python 2 specific behaviour")
-def test_pypkgdata_uri_creation_allows_package_as_bytes():
+def test_pydata_uri_creation_allows_package_as_bytes():
     # On py2 __name__ is a byte string, so it makes sense to accept bytes for
     # the package
-    construct_py_pkg_data_url("foo".encode("ascii"), "bar.txt")
+    pydata.makeurl("foo".encode("ascii"), "bar.txt")
 
 
-def test_pypkgdata_url_deconstruct_requries_pypkgdata_scheme():
+def test_pydata_url_deconstruct_requries_pydata_scheme():
     with pytest.raises(ValueError):
-        deconstruct_py_pkg_data_url("foo://bar/baz")
+        pydata.breakurl("foo://bar/baz")
 
 
-def test_pypkgdata_handler_handles_pypkgdata_uris():
-    handler = PackageDataUrlHandler()
-    assert handler.can_handle(parse.urlsplit(data_data_data_uri))
+def test_pydata_handler_handles_pydata_uris():
+    assert pydata.can_handle(parse.urlsplit(data_data_data_uri))
 
 
-def test_pypkgdata_handler_dereferences_to_correct_data():
+def test_pydata_handler_dereferences_to_correct_data():
     assert type(data_data_data) == six.text_type
 
-    data = PackageDataUrlHandler().dereference(
-        parse.urlsplit(data_data_data_uri))
+    data = pydata.dereference(parse.urlsplit(data_data_data_uri))
 
     assert data.decode("utf-8") == data_data_data
 
 
 @pytest.mark.parametrize("url", [
-    construct_py_pkg_data_url("relaxnginline.tset", "data"),  # dir, not file
-    construct_py_pkg_data_url("relaxnginline.tset", "data/jfklsjflsdf.txt")
+    pydata.makeurl("relaxnginline.tset", "data"),  # dir, not file
+    pydata.makeurl("relaxnginline.tset", "data/jfklsjflsdf.txt")
 ])
-def test_pypkgdata_handler_raises_dereference_error_on_missing_file(url):
+def test_pydata_handler_raises_dereference_error_on_missing_file(url):
     with pytest.raises(DereferenceError):
-        PackageDataUrlHandler().dereference(url)
+        pydata.dereference(url)
