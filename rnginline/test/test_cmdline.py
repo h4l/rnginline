@@ -18,7 +18,7 @@ from rnginline.test.mini_validator import main as minival_main
 from rnginline.exceptions import RelaxngInlineError
 from rnginline import urlhandlers
 
-from rnginline.test.test_relaxnginline import (
+from rnginline.test.test_rnginline import (
     test_testcases_testcases, ttt_ids)
 
 
