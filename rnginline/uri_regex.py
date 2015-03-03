@@ -6,7 +6,7 @@ specified in Appendix A of rfc 3986:
 """
 from __future__ import unicode_literals
 
-from relaxnginline.regexbuilder import (Set, Sequence, Literal, Optional,
+from rnginline.regexbuilder import (Set, Sequence, Literal, Optional,
                                         Choice, ZeroOrMore, OneOrMore, Repeat,
                                         Regex, Start, End)
 

@@ -1,6 +1,6 @@
 [run]
-omit = relaxnginline/test/*
-include = relaxnginline/*
+omit = rnginline/test/*
+include = rnginline/*
 
 [report]
 exclude_lines =

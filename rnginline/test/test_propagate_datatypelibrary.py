@@ -5,9 +5,9 @@ import copy
 from lxml import etree
 import pytest
 
-from relaxnginline.constants import NSMAP
-from relaxnginline.postprocess import datatypelibrary
-from relaxnginline import urlhandlers
+from rnginline.constants import NSMAP
+from rnginline.postprocess import datatypelibrary
+from rnginline import urlhandlers
 
 
 @pytest.mark.parametrize("xml,expected", [
@@ -34,7 +34,7 @@ def test_lookup_datatypelibrary(xml, expected):
     "data/datatype-library-propagation/b.rng"
 ])
 def test_propagate_datatype_library(path):
-    url = urlhandlers.pydata.makeurl("relaxnginline.test", path)
+    url = urlhandlers.pydata.makeurl("rnginline.test", path)
     el = etree.XML(urlhandlers.pydata.dereference(url))
 
     propagated = datatypelibrary(copy.deepcopy(el))

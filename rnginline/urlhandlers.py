@@ -7,8 +7,8 @@ import six
 from six.moves.urllib import parse
 from six.moves.urllib.request import pathname2url, url2pathname
 
-from relaxnginline.exceptions import DereferenceError
-from relaxnginline import uri
+from rnginline.exceptions import DereferenceError
+from rnginline import uri
 
 
 __all__ = ["file", "pydata"]

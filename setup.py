@@ -17,19 +17,19 @@ def get_version(filename):
 
 
 setup(
-    name="relaxnginline",
-    url="https://github.com/h4l/relaxnginline",
-    version=get_version("relaxnginline/__init__.py"),
-    packages=["relaxnginline"],
+    name="rnginline",
+    url="https://github.com/h4l/rnginline",
+    version=get_version("rnginline/__init__.py"),
+    packages=["rnginline"],
     author="Hal Blackburn",
     author_email="hwtb2@cam.ac.uk",
     install_requires=["lxml", "docopt", "six"],
     entry_points={
         "console_scripts": [
-            "relaxnginline = relaxnginline.cmdline:main"
+            "rnginline = rnginline.cmdline:main"
         ]
     },
     package_data={
-        "relaxnginline": ["relaxng.rng"]
+        "rnginline": ["relaxng.rng"]
     }
 )

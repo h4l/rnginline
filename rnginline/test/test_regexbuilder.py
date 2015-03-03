@@ -5,7 +5,7 @@ from copy import copy
 import pytest
 import six
 
-from relaxnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
+from rnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
                                         Choice, Capture, Sequence, Repeat,
                                         Optional, Start, End, SetRange,
                                         Whitespace)

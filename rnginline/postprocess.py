@@ -1,6 +1,6 @@
-from relaxnginline import etree
+from rnginline import etree
 
-from relaxnginline.constants import NSMAP, RNG_DATA_TAG, RNG_VALUE_TAG
+from rnginline.constants import NSMAP, RNG_DATA_TAG, RNG_VALUE_TAG
 
 
 __all__ = ["datatypelibrary"]

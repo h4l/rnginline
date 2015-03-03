@@ -14,12 +14,12 @@ import operator
 from lxml import etree
 import six
 
-from relaxnginline import postprocess, uri, urlhandlers
+from rnginline import postprocess, uri, urlhandlers
 
-from relaxnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
+from rnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
                                      RNG_DEFINE_TAG, RNG_INCLUDE_TAG,
                                      RNG_GRAMMAR_TAG, RNG_NS)
-from relaxnginline.exceptions import (
+from rnginline.exceptions import (
     SchemaIncludesSelfError, NoAvailableHandlerError, ParseError,
     InvalidGrammarError)
 
@@ -42,7 +42,7 @@ NEEDS_ESCAPE_RE = re.compile("[^{0}]"
                              .format(re.escape(NOT_ESCAPED)).encode("ascii"))
 
 RELAXNG_SCHEMA = etree.RelaxNG(etree.fromstring(
-    pkgutil.get_data("relaxnginline", "relaxng.rng")))
+    pkgutil.get_data("rnginline", "relaxng.rng")))
 
 _etree = etree  # maintain access to etree in methods w/ etree param.
 

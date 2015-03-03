@@ -12,13 +12,13 @@ import pkg_resources
 import pytest
 import six
 
-from relaxnginline import _get_cwd
-from relaxnginline.cmdline import main as rng_main
-from relaxnginline.test.mini_validator import main as minival_main
-from relaxnginline.exceptions import RelaxngInlineError
-from relaxnginline import urlhandlers
+from rnginline import _get_cwd
+from rnginline.cmdline import main as rng_main
+from rnginline.test.mini_validator import main as minival_main
+from rnginline.exceptions import RelaxngInlineError
+from rnginline import urlhandlers
 
-from relaxnginline.test.test_relaxnginline import (
+from rnginline.test.test_relaxnginline import (
     test_testcases_testcases, ttt_ids)
 
 
@@ -55,7 +55,7 @@ def testcase_dir():
     """
     Extract testcase data to the filesystem for access by command line tools.
     """
-    return pkg_resources.resource_filename("relaxnginline.test",
+    return pkg_resources.resource_filename("rnginline.test",
                                            "data/testcases")
 
 
@@ -86,7 +86,7 @@ def test_cmdline(testcase_dir, schema_file, test_file, should_match):
         rng_main(argv=_cmdline_args([schema_external, inlined_schema]))
     except SystemExit as e:
         if e.code not in [None, 0]:
-            pytest.fail("relaxnginline.cmdline exited with status: {0}"
+            pytest.fail("rnginline.cmdline exited with status: {0}"
                         .format(e.code))
 
     try:
@@ -141,9 +141,9 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
     schema_path = "data/testcases/xml-base/schema.rng"
 
     schema_bytes = urlhandlers.pydata.dereference(
-        urlhandlers.pydata.makeurl("relaxnginline.test", schema_path))
+        urlhandlers.pydata.makeurl("rnginline.test", schema_path))
     xml_bytes = urlhandlers.pydata.dereference(
-        urlhandlers.pydata.makeurl("relaxnginline.test",
+        urlhandlers.pydata.makeurl("rnginline.test",
                                    "data/testcases/xml-base/positive-1.xml"))
 
     base = urlhandlers.file.makeurl(_external_path(testcase_dir, schema_path))

@@ -4,7 +4,7 @@ from six.moves import urllib
 
 import pytest
 
-from relaxnginline import uri
+from rnginline import uri
 
 
 def test_urllib_urljoin_does_not_work_for_us():

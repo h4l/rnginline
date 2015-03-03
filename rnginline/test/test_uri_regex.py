@@ -2,9 +2,9 @@ from __future__ import unicode_literals
 
 import pytest
 
-from relaxnginline.test.test_regexbuilder import (
+from rnginline.test.test_regexbuilder import (
     _TestCase as tc, _TestString as ts)
-from relaxnginline import uri_regex as ur
+from rnginline import uri_regex as ur
 
 
 @pytest.mark.parametrize("test_case", [

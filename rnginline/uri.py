@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 
 from six.moves.urllib.parse import urlsplit, SplitResult
 
-from relaxnginline import uri_regex
+from rnginline import uri_regex
 
 
 class UriSyntaxError(ValueError):

@@ -6,8 +6,8 @@ import locale
 import docopt
 import six
 
-from relaxnginline import (__version__, inline, uri)
-from relaxnginline.exceptions import RelaxngInlineError
+from rnginline import (__version__, inline, uri)
+from rnginline.exceptions import RelaxngInlineError
 
 
 # Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
@@ -15,8 +15,8 @@ __doc__ = DOC = """
 Flatten a hierachy of RELAX NG schemas into a single schema by recursively
 inlining <include>/<externalRef> elements.
 
-usage: relaxnginline [options] <rng-src> [<rng-output>]
-       relaxnginline [options] --stdin [<rng-output>]
+usage: rnginline [options] <rng-src> [<rng-output>]
+       rnginline [options] --stdin [<rng-output>]
 
 options:
     <rng-src>

@@ -8,8 +8,8 @@ import pytest
 import six
 from six.moves.urllib import parse
 
-from relaxnginline.exceptions import DereferenceError
-from relaxnginline.urlhandlers import (reject_bytes, ensure_parsed, quote,
+from rnginline.exceptions import DereferenceError
+from rnginline.urlhandlers import (reject_bytes, ensure_parsed, quote,
                                        unquote, file, pydata)
 
 
@@ -118,7 +118,7 @@ def test_fs_handler_reads_file_at_url():
     os.unlink(path)
 
 
-data_data_data_uri = ("pydata://relaxnginline.test/data/"
+data_data_data_uri = ("pydata://rnginline.test/data/"
                       "data-%C9%90%CA%87%C9%90p-data.txt")
 
 
@@ -134,7 +134,7 @@ BTW, this file is encoded in UTF-8.
 
 def test_pydata_uri_creation():
     assert type(data_data_data_uri) == six.text_type
-    package, path = "relaxnginline.test", "data/data-ɐʇɐp-data.txt"
+    package, path = "rnginline.test", "data/data-ɐʇɐp-data.txt"
     created_url = pydata.makeurl(package, path)
 
     assert type(created_url) == six.text_type
@@ -177,8 +177,8 @@ def test_pydata_handler_dereferences_to_correct_data():
 
 
 @pytest.mark.parametrize("url", [
-    pydata.makeurl("relaxnginline.tset", "data"),  # dir, not file
-    pydata.makeurl("relaxnginline.tset", "data/jfklsjflsdf.txt")
+    pydata.makeurl("rnginline.tset", "data"),  # dir, not file
+    pydata.makeurl("rnginline.tset", "data/jfklsjflsdf.txt")
 ])
 def test_pydata_handler_raises_dereference_error_on_missing_file(url):
     with pytest.raises(DereferenceError):
