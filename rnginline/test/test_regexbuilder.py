@@ -6,9 +6,8 @@ import pytest
 import six
 
 from rnginline.regexbuilder import (Literal, Set, OneOrMore, ZeroOrMore,
-                                        Choice, Capture, Sequence, Repeat,
-                                        Optional, Start, End, SetRange,
-                                        Whitespace)
+                                    Choice, Capture, Sequence, Repeat,
+                                    Optional, Start, End, SetRange, Whitespace)
 
 
 class _TestString(object):

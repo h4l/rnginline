@@ -328,9 +328,9 @@ def test_provide_base_uri():
     fileobj = io.BytesIO(urlhandlers.pydata.dereference(base_uri))
 
     schema = rnginline.inline(fileobj, base_uri=base_uri,
-                                  # our base URI is absolute, so the default
-                                  # base won't have any effect.
-                                  default_base_uri="x:/blah")
+                              # our base URI is absolute, so the default
+                              # base won't have any effect.
+                              default_base_uri="x:/blah")
 
     xml_url = uri.resolve(base_uri, "positive-1.xml")
     xml = etree.fromstring(urlhandlers.pydata.dereference(xml_url))

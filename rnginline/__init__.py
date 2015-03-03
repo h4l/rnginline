@@ -17,8 +17,8 @@ import six
 from rnginline import postprocess, uri, urlhandlers
 
 from rnginline.constants import (NSMAP, RNG_DIV_TAG, RNG_START_TAG,
-                                     RNG_DEFINE_TAG, RNG_INCLUDE_TAG,
-                                     RNG_GRAMMAR_TAG, RNG_NS)
+                                 RNG_DEFINE_TAG, RNG_INCLUDE_TAG,
+                                 RNG_GRAMMAR_TAG, RNG_NS)
 from rnginline.exceptions import (
     SchemaIncludesSelfError, NoAvailableHandlerError, ParseError,
     InvalidGrammarError)

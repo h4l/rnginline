@@ -10,7 +10,7 @@ from six.moves.urllib import parse
 
 from rnginline.exceptions import DereferenceError
 from rnginline.urlhandlers import (reject_bytes, ensure_parsed, quote,
-                                       unquote, file, pydata)
+                                   unquote, file, pydata)
 
 
 def test_reject_bytes():

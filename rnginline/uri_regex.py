@@ -7,8 +7,8 @@ specified in Appendix A of rfc 3986:
 from __future__ import unicode_literals
 
 from rnginline.regexbuilder import (Set, Sequence, Literal, Optional,
-                                        Choice, ZeroOrMore, OneOrMore, Repeat,
-                                        Regex, Start, End)
+                                    Choice, ZeroOrMore, OneOrMore, Repeat,
+                                    Regex, Start, End)
 
 # The rules here are named according to those in RFC 3986, but transformed to
 # make them valid Python identifiers. Mixed case rules are lower cased and,
