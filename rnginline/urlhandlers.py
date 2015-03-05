@@ -1,3 +1,7 @@
+"""
+Foo bar.
+"""
+
 from __future__ import unicode_literals
 
 import pkgutil
@@ -87,11 +91,36 @@ def _validate_py_pkg_name(package):
 
 
 class FilesystemUrlHandler(object):
+    """
+    A ``UrlHandler`` for ``file:`` URLs. This handler can resolve references to
+    files on the local filesystem.
+    """
 
     def can_handle(self, url):
+        """
+        Check if this handler supports ``url``.
+
+        Args:
+            url: A URL as a string or ``urlparse.SplitResult`` object.
+
+        Returns:
+            bool: True if ``url`` is supported by this handler, False otherwise
+        """
         return ensure_parsed(url).scheme == "file"
 
     def dereference(self, url):
+        """
+        Read the contents of the file identified by ``url``.
+
+        Args:
+            url: A ``file:`` URL
+
+        Returns:
+            The content of the file as a byte string
+
+        Raises:
+            DereferenceError: if an ``IOError`` prevents the file being read
+        """
         url = ensure_parsed(url)
         assert self.can_handle(url)
 
@@ -117,6 +146,23 @@ class FilesystemUrlHandler(object):
     def makeurl(file_path, base="file:"):
         """
         Create a file: URL pointing to the filesystem path file_path.
+
+        Args:
+            file_path: The path on the filesystem to point to
+            base: The base URI-reference to resolve file_path against
+
+        Returns:
+            A ``file:`` URL pointing to ``file_path``
+
+        Note:
+            The current directory of the program has no effect on this function
+
+        Examples:
+            >>> from rnginline.urlhandlers import file
+            >>> file.makeurl(u'/tmp/foo')
+            u'file:/tmp/foo'
+            >>> file.makeurl(u'file.txt', base=u'file:/some/dir/')
+            u'file:/some/dir/file.txt'
         """
         reject_bytes(file_path=file_path)
 
@@ -198,7 +244,14 @@ class PackageDataUrlHandler(object):
 
 
 file = FilesystemUrlHandler()
+"""
+The default instance of :class:`FilesystemUrlHandler`
+"""
+
 pydata = PackageDataUrlHandler()
+"""
+The default instance of :class:`PackageDataUrlHandler`
+"""
 
 
 def get_default_handlers():

@@ -50,6 +50,45 @@ _etree = etree  # maintain access to etree in methods w/ etree param.
 def inline(src=None, etree=None, url=None, path=None, file=None, handlers=None,
            postprocessors=None, create_validator=True, base_uri=None,
            default_base_uri=None, inliner=None):
+    """
+    Load an XML document containing a RELAX NG schema, recursively loading and
+    inlining any ``<include href="...">``/``<externalRef href="...">``
+    elements to form a complete schema in a single XML document.
+
+    URLs in ``href`` attributes are dereferenced to obtain the RELAX NG schemas
+    they point to using one or more handlers. By default, ``file:`` and
+    ``pydata:`` URLs are registered.
+
+    Keyword Args:
+        src: The source to load the schema from. Either an ``lxml.etree``
+            ``Element``, a URL, filesystem path or file-like object
+        etree: Explicitly provide an ``lxml.etree`` ``Element`` as the source
+        url: Explicitly provide a URL as the source
+        path: Explicitly provide a filesystem path as the source
+        file: Explicitly provide a file-like object as the source
+        handlers: An iterable of ``UrlHandler`` objects which are, in turn,
+            requested to fetch each ``href`` attribute's URL. Defaults to
+            the :obj:`rnginline.urlhandlers.file` and
+            :py:obj:`rnginline.urlhandlers.pydata` in that order.
+        base_uri: A URI to override the base URI of the schema with. Useful
+            when the source doesn't have a sensible base URI, e.g. passing a
+            file object like ``sys.stdin``
+        postprocessors: An iterable of ``PostProcess`` objects which perform
+            arbitary transformations on the inlined XML before it's returned/
+            loaded as a schema. Defaults to the result of calling
+            :func:`rnginline.postprocess.get_default_postprocessors`
+        create_validator: If True, a validator created via
+            ``lxml.etree.RelaxNG()`` is returned instead of an lxml ``Element``
+        default_base_uri: The root URI which all others are resolved against.
+            Defaults to ``file:<current directory>`` which relative file URLs
+             such as ``u'external.rng'`` to be found relative to the current
+             working directory.
+        inliner: The class to create the inliner instance from. Defaults to
+            :class:`rnginline.Inliner`.
+        create_validator: If True, an lxml RelaxNG validator is created
+            from the loaded XML document and returned. If False then the
+            loaded XML is returned.
+    """
 
     inliner_cls = Inliner if inliner is None else inliner
 
@@ -251,8 +290,8 @@ class Inliner(object):
                base_uri=None, create_validator=True):
         """
         Load an XML document containing a RELAX NG schema, recursively loading
-        and inlining any <include>/<externalRef> elements to form a complete
-        schema.
+        and inlining any ``<include>``/``<externalRef>`` elements to form a
+        complete schema.
 
         URLs in <include>/<externalRef> elements are resolved against the base
         URL of their containing document, and fetched using one of this
@@ -275,8 +314,8 @@ class Inliner(object):
             A lxml.etree.RelaxNG validator from the fully loaded and inlined
             XML, or the XML itself, depending on the create_validator argument.
         Raises:
-            A RelaxngInlineError (or subclass) is raised if the schema can't be
-            loaded.
+            RelaxngInlineError: (or subclass) is raised if the schema can't be
+                loaded.
         """
         arg_count = reduce(operator.add, (arg is not None for arg in
                                           [src, etree, url, path, file]))

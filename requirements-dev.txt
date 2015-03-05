@@ -1,3 +1,6 @@
 pytest>=2.6.4
 coverage
 mock
+sphinx
+alabaster
+sphinxcontrib-napoleon
