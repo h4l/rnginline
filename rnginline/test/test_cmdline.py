@@ -146,7 +146,10 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
         urlhandlers.pydata.makeurl("rnginline.test",
                                    "data/testcases/xml-base/positive-1.xml"))
 
-    base = urlhandlers.file.makeurl(_external_path(testcase_dir, schema_path))
+    # The default base URI must be a URI rather than URI-reference
+    is_abs = base_arg == "--default-base-uri"
+    base = urlhandlers.file.makeurl(_external_path(testcase_dir, schema_path),
+                                    abs=is_abs)
 
     new_stdin = six.BytesIO(schema_bytes)
     new_stdout = six.BytesIO()

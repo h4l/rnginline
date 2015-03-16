@@ -181,11 +181,9 @@ class Inliner(object):
         """
         Get the URI to use as the default_base_uri if none is provided.
         """
-        # Directory URLs need to end with a slash, otherwise the last path
-        # segment will be dropped when resolve()ing.
-        dir = path.join(_get_cwd(), "")
+        dir = _get_cwd()
         assert dir.endswith("/")
-        return urlhandlers.file.makeurl(dir)
+        return urlhandlers.file.makeurl(dir, abs=True)
 
     def get_default_postprocessors(self):
         return postprocess.get_default_postprocessors()
@@ -754,5 +752,12 @@ def _get_cwd():
     # Six doesn't currently handle this difference between Py 2 and 3:
     # getcwd() returns bytes on Py 2 but text in Py 3.
     if six.PY2:
-        return os.getcwdu()
-    return os.getcwd()
+        cwd_path = os.getcwdu()
+    else:
+        cwd_path = os.getcwd()
+
+    # Directory paths used as URLs need to end with a slash, otherwise the last
+    # path segment will be dropped when resolve()ing.
+    cwd_path = path.join(cwd_path, "")
+    assert cwd_path.endswith("/")
+    return cwd_path

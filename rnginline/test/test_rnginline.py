@@ -293,6 +293,30 @@ def test_multiple_references_to_same_uri_results_in_1_fetch():
     assert len(handler.dereference.mock_calls) == 3
 
 
+def test_inline_url_arguments_are_resolved_against_default_base_uri():
+    class Stop(Exception):
+        pass
+
+    # Mock the dereference method to allow calls to be observed
+    handler = mock.MagicMock()
+    handler.can_handle.return_value = True
+    handler.dereference.side_effect = Stop
+
+    url = "somefile.txt"
+
+    with pytest.raises(Stop):
+        rnginline.inline(url=url, handlers=[handler])
+
+    # The default base URL is the cwd
+    expected_base = urlhandlers.file.makeurl(rnginline._get_cwd(), abs=True)
+    # The url we provide should be resolved against the default base:
+    expected_url = uri.resolve(expected_base, url)
+    assert expected_url.startswith(expected_base)
+    assert expected_url.endswith("somefile.txt")
+
+    handler.dereference.assert_called_once_with(expected_url)
+
+
 def test_override_default_base_uri():
     default_base_uri = urlhandlers.pydata.makeurl(TESTPKG,
                                                   "data/testcases/xml-base/")
@@ -459,7 +483,8 @@ def test_inline_args_fs_path_as_src():
 
     rnginline.inline(path, handlers=[handler])
 
-    handler.dereference.assert_called_once_with(urlhandlers.file.makeurl(path))
+    handler.dereference.assert_called_once_with(
+        urlhandlers.file.makeurl(path, abs=True))
 
 
 def test_inline_args_passing_garbage():

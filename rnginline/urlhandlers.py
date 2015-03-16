@@ -126,7 +126,7 @@ class FilesystemUrlHandler(object):
 
         # Paths will always be absolute due to relative paths being resolved
         # against absolute paths.
-        assert url.path.startswith("/")
+        assert url.path.startswith("/"), url
 
         # The path is URL-encoded, so it needs decoding before we hit the
         # filesystem. In addition, it's a UTF-8 byte string rather than
@@ -143,13 +143,18 @@ class FilesystemUrlHandler(object):
             six.raise_from(err, cause)
 
     @staticmethod
-    def makeurl(file_path, base="file:"):
+    def makeurl(file_path, abs=False):
         """
-        Create a file: URL pointing to the filesystem path file_path.
+        Create relative or absolute URL pointing to the filesystem path
+        ``file_path``.
+
+        (Absolute refers to whether or not the URL has a scheme, not whether
+        the path is absolute.)
 
         Args:
             file_path: The path on the filesystem to point to
-            base: The base URI-reference to resolve file_path against
+            abs: Whether the returned URL should be absolute (with a file:
+                scheme) or a relative URL (URI-reference) without the scheme.
 
         Returns:
             A ``file:`` URL pointing to ``file_path``
@@ -159,24 +164,30 @@ class FilesystemUrlHandler(object):
 
         Examples:
             >>> from rnginline.urlhandlers import file
-            >>> file.makeurl(u'/tmp/foo')
-            u'file:/tmp/foo'
-            >>> file.makeurl(u'file.txt', base=u'file:/some/dir/')
-            u'file:/some/dir/file.txt'
+            >>> file.makeurl('/tmp/foo')
+            '/tmp/foo'
+            >>> file.makeurl('/tmp/foo', abs=True)
+            'file:/tmp/foo'
+            >>> file.makeurl('file.txt')
+            'file.txt'
+            >>> file.makeurl('file.txt', abs=True)
+            'file:file.txt'
         """
         reject_bytes(file_path=file_path)
 
         path = quote(file_path, quoting_func=pathname2url)
-        return uri.resolve(base, path)
+        if abs is True:
+            return uri.resolve("file:", path)
+        return path
 
     @staticmethod
     def breakurl(file_url):
         url = ensure_parsed(file_url)
         scheme, _, path, _, _ = url
 
-        if scheme != "file":
-            raise ValueError("Expected a file: URL, got: {0}"
-                             .format(uri.recombine(url)))
+        if scheme not in ("file", ""):
+            raise ValueError("Expected a file: or scheme-less (relative) URL, "
+                             "got: {0}".format(uri.recombine(url)))
 
         return unquote(ensure_parsed(file_url).path,
                        unquoting_func=url2pathname)

@@ -49,18 +49,23 @@ def test_quoting_roundtrip(text):
     assert unquoted == text
 
 
-@pytest.mark.parametrize("path,base,expected_url,expected_path", [
-    ("foo", None, "file:foo", "foo"),
-    ("foo", "file:/some/dir/", "file:/some/dir/foo", "/some/dir/foo"),
+@pytest.mark.parametrize("path,abs,expected_url,expected_path", [
+    ("foo", True, "file:foo", "foo"),
+    ("foo", False, "foo", "foo"),
+    ("foo", None, "foo", "foo"),
+    ("/some/dir/foo", True, "file:/some/dir/foo", "/some/dir/foo"),
+    ("/some/dir/foo", False, "/some/dir/foo", "/some/dir/foo"),
+    ("/some/dir/foo", None, "/some/dir/foo", "/some/dir/foo"),
 
-    ("some dir/foo bar", None,
+    ("some dir/foo bar", True,
      "file:some%20dir/foo%20bar", "some dir/foo bar"),
-
-    ("some dir/foo bar", "nonfile:",
-     "nonfile:some%20dir/foo%20bar", None),
+    ("some dir/foo bar", False,
+     "some%20dir/foo%20bar", "some dir/foo bar"),
+    ("some dir/foo bar", None,
+     "some%20dir/foo%20bar", "some dir/foo bar")
 ])
-def test_file_url_roundtrip(path, base, expected_url, expected_path):
-    kwargs = {"base": base} if base is not None else {}
+def test_file_url_roundtrip(path, abs, expected_url, expected_path):
+    kwargs = {"abs": abs} if abs is not None else {}
     result_url = file.makeurl(path, **kwargs)
 
     assert isinstance(result_url, six.text_type)
@@ -78,6 +83,15 @@ def test_file_url_roundtrip(path, base, expected_url, expected_path):
     assert result_path == expected_path
 
 
+def test_file_breakurl_permits_relative_urls():
+    assert file.breakurl("foo/bar%20baz.txt") == "foo/bar baz.txt"
+
+
+def test_file_breakurl_rejects_abs_urls_of_wrong_scheme():
+    with pytest.raises(ValueError):
+        file.breakurl("notfile:foo/bar%20baz.txt")
+
+
 def test_fs_handler_handles_file_uris():
     assert file.can_handle(parse.urlsplit("file:some/file"))
 
@@ -87,7 +101,7 @@ def test_fs_handler_doesnt_handle_raw_paths():
 
 
 def test_file_url_creates_file_urls():
-    file_url = file.makeurl("some/file/∑´^¨∂ƒ")
+    file_url = file.makeurl("some/file/∑´^¨∂ƒ", abs=True)
     assert type(file_url) == six.text_type
     assert file_url == "file:some/file/%E2%88%91%C2%B4%5E%C2%A8%E2%88%82%C6%92"
     assert file.breakurl(file_url) == "some/file/∑´^¨∂ƒ"
@@ -98,7 +112,7 @@ def test_fs_handler_raises_dereference_error_on_missing_files():
     os.close(handle)
     os.unlink(path)
 
-    url = file.makeurl(path)
+    url = file.makeurl(path, abs=True)
     with pytest.raises(DereferenceError) as e:
         file.dereference(parse.urlsplit(url))
     assert url in six.text_type(e.value)
@@ -112,7 +126,7 @@ def test_fs_handler_reads_file_at_url():
     with os.fdopen(handle, "wb") as f:
         f.write(contents)
 
-    url = file.makeurl(path)
+    url = file.makeurl(path, abs=True)
     result = file.dereference(parse.urlsplit(url))
     assert result == contents
     os.unlink(path)
