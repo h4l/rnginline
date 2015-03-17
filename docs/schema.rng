@@ -1,0 +1,16 @@
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+  <include href="external.rng">
+    <!-- Override foo -->
+    <define name="foo">
+      <element name="foo">
+        <value>abc</value>
+      </element>
+    </define>
+  </include>
+  <start>
+    <element name="root">
+      <ref name="foo"/>
+      <ref name="bar"/>
+    </element>
+  </start>
+</grammar>

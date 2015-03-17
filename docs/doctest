@@ -1,0 +1,2 @@
+/Users/hal/Documents/workspace/relaxnginline/rnginline/__init__.py:docstring of rnginline.inline:40: ERROR: Unexpected indentation.
+/Users/hal/Documents/workspace/relaxnginline/rnginline/urlhandlers.py:docstring of rnginline.urlhandlers.FilesystemUrlHandler.makeurl:9: WARNING: Inline literal start-string without end-string.

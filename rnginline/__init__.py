@@ -56,8 +56,8 @@ def inline(src=None, etree=None, url=None, path=None, file=None, handlers=None,
     elements to form a complete schema in a single XML document.
 
     URLs in ``href`` attributes are dereferenced to obtain the RELAX NG schemas
-    they point to using one or more handlers. By default, ``file:`` and
-    ``pydata:`` URLs are registered.
+    they point to using one or more URL Handlers. By default, handlers for
+    ``file:`` and ``pydata:`` URLs are registered.
 
     Keyword Args:
         src: The source to load the schema from. Either an ``lxml.etree``
@@ -81,9 +81,9 @@ def inline(src=None, etree=None, url=None, path=None, file=None, handlers=None,
             ``lxml.etree.RelaxNG()`` is returned instead of an lxml ``Element``
         default_base_uri: The root URI which all others are resolved against.
             Defaults to ``file:<current directory>`` which relative file URLs
-             such as ``u'external.rng'`` to be found relative to the current
+             such as ``'external.rng'`` to be found relative to the current
              working directory.
-        inliner: The class to create the inliner instance from. Defaults to
+        inliner: The class to create the ``Inliner`` instance from. Defaults to
             :class:`rnginline.Inliner`.
         create_validator: If True, an lxml RelaxNG validator is created
             from the loaded XML document and returned. If False then the
@@ -159,8 +159,33 @@ class InlineContext(object):
 
 
 class Inliner(object):
+    """
+    Inliners merge references to external schemas into an input schema via
+    their ``inline()`` method.
+
+    Typically you can ignore this class and just use
+    :py:func:`rnginline.inline` which handles instantiating an ``Inliner`` and
+    calling its ``inline()`` method.
+    """
     def __init__(self, handlers=None, postprocessors=None,
                  default_base_uri=None):
+        """
+        Create an Inliner with the specified Handlers, PostProcessors and
+        default base URI.
+
+        Args:
+            handlers: A list of URL Handler objects to handle URLs encountered
+                by ``inline()``. Defaults to the
+                :obj:`rnginline.urlhandlers.file` and
+                :py:obj:`rnginline.urlhandlers.pydata` in that order.
+            postprocessors: A list of PostProcess objects to apply to the fully
+                inlined schema XML before it's returned by ``inline()``.
+                Defaults to the result of calling
+                :func:`rnginline.postprocess.get_default_postprocessors`
+            default_base_uri: The root URI which all others are resolved
+                against. Defaults to ``file:<current directory>``
+
+        """
         self.handlers = list(
             self.get_default_handlers() if handlers is None else handlers)
 
@@ -310,7 +335,8 @@ class Inliner(object):
                 loaded XML is returned.
         Returns:
             A lxml.etree.RelaxNG validator from the fully loaded and inlined
-            XML, or the XML itself, depending on the create_validator argument.
+            XML, or the XML itself, depending on the ``create_validator``
+            argument.
         Raises:
             RelaxngInlineError: (or subclass) is raised if the schema can't be
                 loaded.

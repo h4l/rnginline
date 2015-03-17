@@ -1,0 +1,12 @@
+<rng:grammar xmlns:xyz="x:/my/ns" xmlns:rng="http://relaxng.org/ns/structure/1.0">
+  <rng:define name="foo">
+    <rng:element name="foo">
+      <rng:notAllowed/> <!-- No foo for you! -->
+    </rng:element>
+  </rng:define>
+  <rng:define name="bar">
+    <rng:element name="xyz:bar">
+      <rng:text/>
+    </rng:element>
+  </rng:define>
+</rng:grammar>

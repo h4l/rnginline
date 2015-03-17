@@ -101,7 +101,7 @@ class FilesystemUrlHandler(object):
         Check if this handler supports ``url``.
 
         Args:
-            url: A URL as a string or ``urlparse.SplitResult`` object.
+            url: A URL as a string.
 
         Returns:
             bool: True if ``url`` is supported by this handler, False otherwise

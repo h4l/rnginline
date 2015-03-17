@@ -1,27 +1,32 @@
 Quickstart
 ==========
 
-Once you've :doc:`installed rnginline <installing>` you can use it from Python
-like this:
+Install with pip:
+
+.. code-block:: console
+
+    $ pip install rnginline
+
+You can use it from Python like this:
 
 .. code-block:: python
 
     >>> import rnginline
-    >>> rnginline.inline("my-nested-schema-root.rng")
-    <lxml.etree.RelaxNG at 0x10db63098>
+    >>> rnginline.inline('my-nested-schema-root.rng')
+    <lxml.etree.RelaxNG object at ...>
 
 You can load a multi-file schema from a Python package's data like this:
 
-.. code-block:: python
+.. doctest::
 
     >>> import rnginline
     >>> from rnginline.urlhandlers import pydata
-    >>> url = pydata.makeurl(u"rnginline.test",
-    ...                      u"data/testcases/external-ref-1/schema.rng")
+    >>> url = pydata.makeurl('rnginline.test',
+    ...                      'data/testcases/external-ref-1/schema.rng')
     >>> url
-    u'pydata://rnginline.test/data/testcases/external-ref-1/schema.rng'
+    'pydata://rnginline.test/data/testcases/external-ref-1/schema.rng'
     >>> rnginline.inline(url)
-    <lxml.etree.RelaxNG at 0x10daddc68>
+    <lxml.etree.RelaxNG object at ...>
 
 You can use it from the command line like this:
 

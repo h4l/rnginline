@@ -1,6 +1,16 @@
 rnginline
 =========
 
+.. testsetup::
+
+    import sys
+    if sys.version_info.major == 2:
+        raise AssertionError(
+            "Doctests are written for Python 3 and won't pass on Python 2. "
+            "(This is because doctest doesn't abstract output differences "
+            "between Py 2 and 3, so it's not practical to support both at "
+            "once.)")
+
 rnginline is a Python library and command line tool for flattening multi-file
 `RELAX NG`_ schemas into a single file, taking care not to change the semantics
 of the schema.
@@ -28,6 +38,6 @@ Contents
 
     quickstart
     installing
-    from-cmdline
-    from-python
+    From the Command Line <from-cmdline>
+    From Python <from-python>
     API Documentation <api>

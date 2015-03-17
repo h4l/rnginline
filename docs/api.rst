@@ -3,6 +3,10 @@ rnginline API
 
 This is the Python API reference for rnginline.
 
+.. testsetup::
+
+    from __future__ import unicode_literals
+
 ``rnginline``
 -------------
 
@@ -10,7 +14,9 @@ This is the Python API reference for rnginline.
 
     .. autofunction:: inline(source-arg, [optional-kwargs])
 
-    .. autoclass:: rnginline.Inliner(handlers=None, postprocessors=None, default_base_uri=None)
+    .. autoclass:: rnginline.Inliner
+
+        .. automethod:: __init__
 
         .. automethod:: inline([src], **kwargs)
 
@@ -46,6 +52,8 @@ This is the Python API reference for rnginline.
          :annotation:
 
 Usage:
+.. doctest::
+
     >>> from rnginline import urlhandlers
     >>> urlhandlers.file.can_handle(u"file:/tmp/foo.txt")
     True
