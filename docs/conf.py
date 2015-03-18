@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.abspath('..'))
 extensions = [
     'alabaster',
     'sphinx.ext.autodoc',
-    'sphinxcontrib.napoleon',
+    'sphinx.ext.napoleon',
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     #'sphinx.ext.viewcode',

@@ -17,9 +17,10 @@ class PropagateDatatypeLibraryPostProcess(object):
     attributes are resolved and explicitly set on each data and value element,
     then removed from all other elements.
 
-    This can be used to work around libxml2 not resolving datatypeLibrary
-    attributes from div elements:
-        https://bugzilla.gnome.org/show_bug.cgi?id=744146
+    This can be used to work around `libxml2 not resolving datatypeLibrary
+    attributes from div elements <libxml2 bug>`_.
+
+    .. _libxml2 bug: https://bugzilla.gnome.org/show_bug.cgi?id=744146
     """
 
     def lookup_datatypelibrary(self, element):
@@ -47,8 +48,16 @@ class PropagateDatatypeLibraryPostProcess(object):
 
 
 datatypelibrary = PropagateDatatypeLibraryPostProcess()
+"""
+The default instance of :py:class:`PropagateDatatypeLibraryPostProcess`
+"""
 
 
 def get_default_postprocessors():
+    """
+    Get a list containing the default postprocessor objects.
+
+    Currently contains just :py:data:`datatypelibrary`.
+    """
     # For compatibility with libxml2
     return [datatypelibrary]

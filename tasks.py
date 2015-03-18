@@ -65,17 +65,25 @@ def pep8(ctx):
 
 @task
 def docs_test(ctx, cache_dir=None, out_dir=None):
-    docs(ctx, builder="doctest", cache_dir=cache_dir, out_dir=out_dir)
-    docs(ctx, builder="html", cache_dir=cache_dir, out_dir=out_dir)
+    docs(ctx, builder="doctest", cache_dir=cache_dir, out_dir=out_dir,
+         warnings_are_errors=True)
+    docs(ctx, builder="html", cache_dir=cache_dir, out_dir=out_dir,
+         warnings_are_errors=True)
 
 
 @task
-def docs(ctx, builder="html", cache_dir=None, out_dir="docs/_build/"):
+def docs(ctx, builder="html", cache_dir=None, out_dir="docs/_build/",
+         warnings_are_errors=False):
     """Build sphinx documentation"""
-    cache = ["-d", cache_dir] if cache_dir is not None else []
+    opts = []
+    if cache_dir is not None:
+        opts += ["-d", cache_dir]
+    if warnings_are_errors is True:
+        opts += ["-W"]
+
     out_dir = "docs/_build/" if out_dir is None else out_dir
 
-    ctx.run(cmd(["sphinx-build", "-b", builder] + cache +
+    ctx.run(cmd(["sphinx-build", "-b", builder] + opts +
                 [path.join(ROOT, "docs/"), out_dir]))
 
 

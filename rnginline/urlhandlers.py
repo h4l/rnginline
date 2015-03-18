@@ -1,5 +1,11 @@
+# -*- coding: utf-8 -*-
 """
-Foo bar.
+This module contains the built-in URL Handlers provided by ``rnginline``.
+
+URL Handler objects are responsible for:
+
+* Saying if they can handle a URL — ``can_handle(url)``
+* Fetching the data referenced by a URL — ``dereference(url)``
 """
 
 from __future__ import unicode_literals
@@ -100,6 +106,8 @@ class FilesystemUrlHandler(object):
         """
         Check if this handler supports ``url``.
 
+        This handler supports URLs with the ``file:`` scheme.
+
         Args:
             url: A URL as a string.
 
@@ -153,15 +161,13 @@ class FilesystemUrlHandler(object):
 
         Args:
             file_path: The path on the filesystem to point to
-            abs: Whether the returned URL should be absolute (with a file:
-                scheme) or a relative URL (URI-reference) without the scheme.
-
+            abs: Whether the returned URL should be absolute (with a ``file``
+                scheme) or a relative URL (URI-reference) without the scheme
         Returns:
-            A ``file:`` URL pointing to ``file_path``
+            A ``file`` URL pointing to ``file_path``
 
         Note:
             The current directory of the program has no effect on this function
-
         Examples:
             >>> from rnginline.urlhandlers import file
             >>> file.makeurl('/tmp/foo')
@@ -182,6 +188,22 @@ class FilesystemUrlHandler(object):
 
     @staticmethod
     def breakurl(file_url):
+        """
+        Decode a ``file:`` URL into a filesystem path.
+
+        Args:
+            file_url: The URL to decode. Can be an absolute URL with a
+                ``file:`` scheme, or a relative URL without a scheme.
+        Returns:
+            The filesystem path implied by the URL
+
+        Examples:
+            >>> from rnginline.urlhandlers import file
+            >>> file.breakurl('file:/tmp/some%20file.txt')
+            '/tmp/some file.txt'
+            >>> file.breakurl('some/path/file%20name.dat')
+            'some/path/file name.dat'
+        """
         url = ensure_parsed(file_url)
         scheme, _, path, _, _ = url
 
@@ -194,13 +216,46 @@ class FilesystemUrlHandler(object):
 
 
 class PackageDataUrlHandler(object):
+    """
+    A URL Handler which allows data files in Python packages to be referenced.
+
+    The URLs handled by instances of this class are layed out as follows::
+
+        pydata://<package-path>/<path-under-package>
+
+    For example ``pydata://rnginline.test/data/loops/start.rng``.
+    """
 
     scheme = "pydata"
 
     def can_handle(self, url):
+        """
+        Check if this handler supports ``url``.
+
+        This handler supports URLs with the ``pydata:`` scheme.
+
+        Args:
+            url: A URL as a string.
+
+        Returns:
+            bool: True if ``url`` is supported by this handler, False otherwise
+        """
         return ensure_parsed(url).scheme == self.scheme
 
     def dereference(self, url):
+        """
+        Get the contents of the data file identified by ``url``
+
+        ``pkgutil.get_data()`` is used to fetch the data.
+
+        Args:
+            url: A ``pydata:`` URL pointing at a file under a Python package
+        Returns:
+             A byte string
+        Raises:
+            DereferenceError: If the data identified by the URL does not exist
+                or cannot be read
+        """
         assert self.can_handle(url)
 
         package, pkg_path = self.breakurl(url)
@@ -218,13 +273,16 @@ class PackageDataUrlHandler(object):
         """
         Create a URL referencing data under a Python package.
 
-        The made up scheme pydata:// is used.
+        Args:
+            package: A dotted path you'd use to import the package in question
+            resource_path: The path under the package to a data file
+        Returns:
+            ...: A URL of the form ``pydata://<package>/<resource_path>``
 
-        The arguments are the same as would be passed to pkgutil.get_data() in
-        order to fetch the data from the package.
-
-        The URL can be handled by PackageDataUrlHandler, using
-        pkgutil.get_data().
+        Example:
+            >>> from rnginline.urlhandlers import pydata
+            >>> pydata.makeurl('mypkg.subpkg', 'some/file.txt')
+            'pydata://mypkg.subpkg/some/file.txt'
         """
         # Python 2 uses bytes for __name__, so no point in rejecting non-text
         reject_bytes(resource_path=resource_path)
@@ -240,6 +298,19 @@ class PackageDataUrlHandler(object):
 
     @classmethod
     def breakurl(cls, url):
+        """
+        Deconstruct a ``pydata:`` URL into constituent parts.
+
+        Args:
+            url: A ``pydata:`` URL
+        Returns:
+            A 2-tuple of the package and path contained in the URL
+
+        Example:
+            >>> from rnginline.urlhandlers import pydata
+            >>> pydata.breakurl('pydata://mypkg.subpkg/some/file.txt')
+            ('mypkg.subpkg', 'some/file.txt')
+        """
         url = ensure_parsed(url)
         scheme, package, path, _, _ = url
 
@@ -266,4 +337,7 @@ The default instance of :class:`PackageDataUrlHandler`
 
 
 def get_default_handlers():
+    """
+    Get a list of the default URL Handler objects.
+    """
     return [file, pydata]

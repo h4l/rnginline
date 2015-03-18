@@ -40,4 +40,5 @@ Contents
     installing
     From the Command Line <from-cmdline>
     From Python <from-python>
+    uri-resolution
     API Documentation <api>

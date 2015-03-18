@@ -81,13 +81,19 @@ def inline(src=None, etree=None, url=None, path=None, file=None, handlers=None,
             ``lxml.etree.RelaxNG()`` is returned instead of an lxml ``Element``
         default_base_uri: The root URI which all others are resolved against.
             Defaults to ``file:<current directory>`` which relative file URLs
-             such as ``'external.rng'`` to be found relative to the current
-             working directory.
+            such as ``'external.rng'`` to be found relative to the current
+            working directory.
         inliner: The class to create the ``Inliner`` instance from. Defaults to
             :class:`rnginline.Inliner`.
         create_validator: If True, an lxml RelaxNG validator is created
             from the loaded XML document and returned. If False then the
             loaded XML is returned.
+    Returns:
+        A ``lxml.etree.RelaxNG`` validator from the fully loaded and inlined
+        XML, or the XML itself, depending on the ``create_validator`` argument.
+    Raises:
+        RelaxngInlineError: (or subclass) is raised if the schema can't be
+            loaded.
     """
 
     inliner_cls = Inliner if inliner is None else inliner
@@ -334,9 +340,9 @@ class Inliner(object):
                 from the loaded XML document and returned. If False then the
                 loaded XML is returned.
         Returns:
-            A lxml.etree.RelaxNG validator from the fully loaded and inlined
-            XML, or the XML itself, depending on the ``create_validator``
-            argument.
+            A ``lxml.etree.RelaxNG`` validator from the fully loaded and
+            inlined XML, or the XML itself, depending on the
+            ``create_validator`` argument.
         Raises:
             RelaxngInlineError: (or subclass) is raised if the schema can't be
                 loaded.

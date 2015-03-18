@@ -26,6 +26,23 @@ This is the Python API reference for rnginline.
 
 .. automodule:: rnginline.urlhandlers
 
+    Default URL Handler instances
+    *****************************
+
+    The following URL Handler objects are provided, ready to use:
+
+    .. autodata:: file
+        :annotation:
+    .. autodata:: pydata
+         :annotation:
+
+    They're also available via:
+
+    .. autofunction:: get_default_handlers
+
+    URL Handler Classes
+    *******************
+
     .. autoclass:: FilesystemUrlHandler
 
         .. automethod:: can_handle
@@ -46,16 +63,13 @@ This is the Python API reference for rnginline.
 
         .. automethod:: breakurl
 
-    .. autodata:: file
-        :annotation:
-    .. autodata:: pydata
-         :annotation:
+``rnginline.postprocess``
+-------------------------
 
-Usage:
-.. doctest::
+.. automodule:: rnginline.postprocess
 
-    >>> from rnginline import urlhandlers
-    >>> urlhandlers.file.can_handle(u"file:/tmp/foo.txt")
-    True
-    >>> urlhandlers.pydata.can_handle(u"pydata://mypackage/path/a.txt")
-    True
+    .. autodata:: datatypelibrary
+
+    .. autofunction:: get_default_postprocessors
+
+    .. autoclass:: PropagateDatatypeLibraryPostProcess

@@ -1,3 +1,9 @@
+"""
+This module contains URI related functions, implemented according to
+`RFC 3986`_.
+
+.. _RFC 3986: https://tools.ietf.org/html/rfc3986
+"""
 from __future__ import unicode_literals
 
 from six.moves.urllib.parse import urlsplit, SplitResult
