@@ -64,6 +64,12 @@ def pep8(ctx):
 
 
 @task
+def readme(ctx):
+    """Lint the README for reStructuredText syntax issues"""
+    ctx.run("restructuredtext-lint README.rst")
+
+
+@task
 def docs_test(ctx, cache_dir=None, out_dir=None):
     docs(ctx, builder="doctest", cache_dir=cache_dir, out_dir=out_dir,
          warnings_are_errors=True)
