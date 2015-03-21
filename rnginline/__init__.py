@@ -26,7 +26,7 @@ from rnginline.exceptions import (
 
 __version__ = "0.0.0"
 
-__all__ = ["inline", "Inliner", ]
+__all__ = ["inline", "Inliner"]
 
 # Section 5.4 of XLink specifies that chars other than these must be escaped
 # in values of href attrs before using them as URIs:

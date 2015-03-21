@@ -11,6 +11,10 @@ from six.moves.urllib.parse import urlsplit, SplitResult
 from rnginline import uri_regex
 
 
+__all__ = ["UriSyntaxError", "is_uri", "is_uri_reference", "resolve",
+           "recombine"]
+
+
 class UriSyntaxError(ValueError):
     pass
 
