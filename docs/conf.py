@@ -116,7 +116,7 @@ html_theme_options = {
     "github_button": True,
     "github_user": "h4l",
     "github_repo": "rnginline",
-    "description": "This is a description of rnginline"
+    "description": "Flatten multi-file RELAX NG schemas"
 }
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
