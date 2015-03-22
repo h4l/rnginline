@@ -78,7 +78,7 @@ def docs_test(ctx, cache_dir=None, out_dir=None):
 
 
 @task
-def docs(ctx, builder="html", cache_dir=None, out_dir="docs/_build/",
+def docs(ctx, builder="html", cache_dir=None, out_dir=None,
          warnings_are_errors=False):
     """Build sphinx documentation"""
     opts = []
@@ -87,7 +87,7 @@ def docs(ctx, builder="html", cache_dir=None, out_dir="docs/_build/",
     if warnings_are_errors is True:
         opts += ["-W"]
 
-    out_dir = "docs/_build/" if out_dir is None else out_dir
+    out_dir = path.join(ROOT, "docs/_build/") if out_dir is None else out_dir
 
     ctx.run(cmd(["sphinx-build", "-b", builder] + opts +
                 [path.join(ROOT, "docs/"), out_dir]))
