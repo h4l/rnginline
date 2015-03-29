@@ -12,7 +12,7 @@ install: "pip install -r requirements/dev.txt"
 env:
     global:
         # Configure pip to look for packages in wheelhouse when installing.
-        - PIP_FIND_LINKS=$(TRAVIS_BUILD_DIR)/wheelhouse
+        - PIP_FIND_LINKS=$TRAVIS_BUILD_DIR/wheelhouse
     matrix:
         # tox-wheelcache.ini ensures the wheelhouse dir is populated with
         # pre-built Wheels for all dependencies. This avoids building lxml
@@ -43,5 +43,5 @@ cache:
         - wheelhouse
 
 script:
-    - echo PIP_FIND_LINKS: $PIP_FIND_LINKS
+    - "echo PIP_FIND_LINKS: $PIP_FIND_LINKS"
     - tox -v -v $TOX_OPTS
