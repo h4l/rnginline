@@ -9,3 +9,5 @@ dist/
 .coverage
 .coverage.*
 _build/
+wheelhouse/
+.tox-wheelhouse/

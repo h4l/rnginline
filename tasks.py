@@ -1,10 +1,17 @@
 from __future__ import unicode_literals, print_function
 
+import sys
 from os import path
+import os
+import glob
+import itertools
+import operator
 
+import pkg_resources
 from invoke import ctask as task
 import six
 from six.moves import shlex_quote
+import wheel.pep425tags
 
 
 ROOT = path.relpath(path.dirname(__file__))
@@ -91,6 +98,81 @@ def docs(ctx, builder="html", cache_dir=None, out_dir=None,
 
     ctx.run(cmd(["sphinx-build", "-b", builder] + opts +
                 [path.join(ROOT, "docs/"), out_dir]))
+
+
+def get_distribution(type):
+    type_glob = {
+        "sdist": "rnginline-*.tar.gz",
+        "wheel": "rnginline-*.whl"
+    }.get(type)
+
+    if type_glob is None:
+        raise ValueError("Unknown distribution type: {0}".format(type))
+
+    pattern = path.join(ROOT, "dist", type_glob)
+    dists = glob.glob(pattern)
+
+    if len(dists) != 1:
+        raise ValueError("Expected one find one distribution matching: {0!r} "
+                         "but got: {1}".format(pattern, len(dists)))
+
+    return dists[0]
+
+
+@task
+def cache_all_requirement_wheels(ctx):
+    ctx.run("tox -c tox-wheelcache.ini", pty=True)
+
+
+def get_platform_tag():
+    return wheel.pep425tags.get_abbr_impl() + wheel.pep425tags.get_impl_ver()
+
+
+@task
+def cache_requirement_wheels(ctx):
+    wheelhouse = path.join(ROOT, "wheelhouse")
+    all_reqs = path.join(ROOT, "requirements", "all.txt")
+
+    with open(all_reqs) as f:
+        reqs = list(pkg_resources.parse_requirements(f.read()))
+
+    print("Checking if wheel cache is populated...")
+
+    absent_reqs = []
+
+    for req in reqs:
+        print("checking {0} ... ".format(req), end="")
+        sys.stdout.flush()
+
+        is_cached_cmd = cmd(
+            "pip", "install", "--download", "/tmp/", "--use-wheel",
+            "--no-index", "--find-links", wheelhouse, str(req))
+        result = ctx.run(is_cached_cmd, warn=True, hide="both")
+
+        if result.ok:
+            print("present")
+        else:
+            print("ABSENT")
+            absent_reqs.append(req)
+
+    if absent_reqs:
+        print()
+        print("Wheel cache is not complete, populating...")
+
+        # Build wheels for all our dependencies, storing them in the wheelhouse
+        # dir
+        ctx.run(cmd([
+            "pip", "wheel",
+            # Make built wheels specific to interpreter running this.
+            # Required because non-wheel packages like pytest are not
+            # necessarily universal. e.g. pytest for python 2.6 requires
+            # argparse, but 2.7, 3.3, 3.4 don't.
+            "--build-option", "--python-tag=" + get_platform_tag(),
+            "--wheel-dir", wheelhouse] +
+            list(map(six.text_type, absent_reqs))))
+
+    print()
+    print("Done")
 
 
 def cmd(*args):
