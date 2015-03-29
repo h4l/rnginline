@@ -69,7 +69,7 @@ RELAX NG files on the filesystem can be referenced by path:
 .. doctest::
 
     >>> import rnginline, os
-    >>> os.listdir('.')
+    >>> sorted(os.listdir('.'))
     ['external.rng', 'schema.rng']
     >>> rnginline.inline('schema.rng')
     <lxml.etree.RelaxNG object at ...>
