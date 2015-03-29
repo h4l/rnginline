@@ -1,0 +1,7 @@
+include * .*
+include requirements/*.txt
+include rnginline/relaxng.rng
+recursive-include docs *
+recursive-include rnginline/test/data *
+prune docs/_build
+global-exclude *.pyc *.pyo .coverage .coverage.*

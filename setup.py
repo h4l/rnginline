@@ -25,6 +25,11 @@ def file_contents(path):
         return f.read()
 
 
+def file_lines(path):
+    return [line for line in file_contents(path).split("\n")
+            if line.strip()]
+
+
 setup(
     name="rnginline",
     url="https://github.com/h4l/rnginline",
@@ -33,16 +38,17 @@ setup(
     version=get_version("rnginline/__init__.py"),
     author="Hal Blackburn",
     author_email="hwtb2@cam.ac.uk",
-    packages=["rnginline"],
-    install_requires=["lxml", "docopt", "six"],
+    packages=["rnginline", "rnginline.test"],
+    install_requires=file_lines("requirements/install.txt"),
+    extras_require={
+        "tests": file_lines("requirements/test.txt")
+    },
     entry_points={
         "console_scripts": [
             "rnginline = rnginline.cmdline:main"
         ]
     },
-    package_data={
-        "rnginline": ["relaxng.rng"]
-    },
+    include_package_data=True,
     license='Apache 2.0',
     classifiers=[
         "Development Status :: 4 - Beta",
