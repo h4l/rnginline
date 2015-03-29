@@ -10,7 +10,7 @@ import operator
 import pkg_resources
 from invoke import ctask as task
 import six
-from six.moves import shlex_quote
+from six.moves import shlex_quote, reduce
 import wheel.pep425tags
 
 
