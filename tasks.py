@@ -100,6 +100,29 @@ def docs(ctx, builder="html", cache_dir=None, out_dir=None,
                 [path.join(ROOT, "docs/"), out_dir]))
 
 
+@task
+def build_dists(ctx):
+    """Build distribution packages"""
+    ctx.run("python setup.py sdist", pty=True)
+    ctx.run("python setup.py bdist_wheel", pty=True)
+
+
+@task
+def test_dists(ctx):
+    """Test the build distributions from ./dist/ in isolation"""
+    ctx.run("tox -c tox-dist.ini", pty=True)
+
+
+@task
+def test_dist(ctx, dist_type):
+    """Test a built distribution"""
+    dist_file = get_distribution(dist_type)
+
+    ctx.run(cmd("pip", "install", "--ignore-installed", dist_file), pty=True)
+
+    ctx.run(cmd(["py.test"] + _pytest_args()), pty=True)
+
+
 def get_distribution(type):
     type_glob = {
         "sdist": "rnginline-*.tar.gz",

@@ -11,3 +11,4 @@ dist/
 _build/
 wheelhouse/
 .tox-wheelcache/
+.tox-dist/
