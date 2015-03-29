@@ -66,7 +66,7 @@ You can use it from the command line like this:
 Documentation
 -------------
 
-Documentation is available at TODO: put online.
+Documentation is available at http://rnginline.readthedocs.org/
 
 
 Motivation
