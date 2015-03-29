@@ -10,13 +10,38 @@ install: "pip install -r requirements/dev.txt"
 
 # Create a matrix containing each tox environment
 env:
-    - TOX_ENV=py26
-    - TOX_ENV=py27
-    - TOX_ENV=py33
-    - TOX_ENV=py34
-    - TOX_ENV=pypy
-    - "TOX_ENV=py27-pep8,py34-pep8"
-    - TOX_ENV=docs
-    - TOX_ENV=readme
+    global:
+        # Configure pip to look for packages in wheelhouse when installing.
+        - PIP_FIND_LINKS=$(TRAVIS_BUILD_DIR)/wheelhouse
+    matrix:
+        # tox-wheelcache.ini ensures the wheelhouse dir is populated with
+        # pre-built Wheels for all dependencies. This avoids building lxml
+        # on every test run, which takes ages.
+        - TOX_OPTS="-c tox-wheelcache.ini"
+        # The actual test runs:
+        - TOX_OPTS="-e py26"
+        - TOX_OPTS="-e py27"
+        - TOX_OPTS="-e py33"
+        - TOX_OPTS="-e py34"
+        - TOX_OPTS="-e pypy"
+        # code linting
+        - TOX_OPTS="-e py27-pep8,py34-pep8"
+        # check docs can build
+        - TOX_OPTS="-e docs"
+        # readme linting
+        - TOX_OPTS="-e readme"
 
-script: tox -e $TOX_ENV
+matrix:
+  allow_failures:
+    # Allow the cache building job to fail as it's not really a test, just
+    # an optimisation.
+    - env: TOX_OPTS="-c tox-wheelcache.ini"
+
+# Save and restore the contents of wheelhouse for each build
+cache:
+    directories:
+        - wheelhouse
+
+script:
+    - echo PIP_FIND_LINKS: $PIP_FIND_LINKS
+    - tox -v -v $TOX_OPTS
