@@ -28,7 +28,7 @@ def _pytest_args():
 
 
 @task
-def test(ctx, combine_coverage=True):
+def test(ctx, combine_coverage=False):
     """Run rnginline test suite"""
     cov_args = ["--parallel-mode"] if combine_coverage is True else []
     ctx.run(cmd(["coverage", "run"] + cov_args +
@@ -78,6 +78,15 @@ def readme(ctx):
 
 @task
 def docs_test(ctx, cache_dir=None, out_dir=None):
+    """
+    Test the doctests in the Sphinx docs. Must be run with Python 3."""
+    if not six.PY3:
+        msg = """\
+error: Tried to run doc's doctests with Python 2. They must be run with
+Python 3 due to the doctest module not handling formatting differences
+between 2 and 3."""
+        raise RuntimeError(msg)
+
     docs(ctx, builder="doctest", cache_dir=cache_dir, out_dir=out_dir,
          warnings_are_errors=True)
     docs(ctx, builder="html", cache_dir=cache_dir, out_dir=out_dir,
