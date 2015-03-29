@@ -17,25 +17,30 @@ env:
         # tox-wheelcache.ini ensures the wheelhouse dir is populated with
         # pre-built Wheels for all dependencies. This avoids building lxml
         # on every test run, which takes ages.
-        - TOX_OPTS="-c tox-wheelcache.ini"
+        - CMD="pip install -r requirements/invoke-tasks.txt;
+          invoke cache_all_requirement_wheels"
         # The actual test runs:
-        - TOX_OPTS="-e py26"
-        - TOX_OPTS="-e py27"
-        - TOX_OPTS="-e py33"
-        - TOX_OPTS="-e py34"
-        - TOX_OPTS="-e pypy"
+        - CMD="tox -v -v -e py26"
+        - CMD="tox -v -v -e py27"
+        - CMD="tox -v -v -e py33"
+        - CMD="tox -v -v -e py34"
+        - CMD="tox -v -v -e pypy"
         # code linting
-        - TOX_OPTS="-e py27-pep8,py34-pep8"
+        - CMD="tox -v -v -e py27-pep8,py34-pep8"
         # check docs can build
-        - TOX_OPTS="-e docs"
+        - CMD="tox -v -v -e docs"
         # readme linting
-        - TOX_OPTS="-e readme"
+        - CMD="tox -v -v -e readme"
+        # code coverage
+        - CMD="pip install codecov -r requirements/invoke-tasks.txt;
+          invoke coverage && codecov"
 
 matrix:
   allow_failures:
     # Allow the cache building job to fail as it's not really a test, just
     # an optimisation.
-    - env: TOX_OPTS="-c tox-wheelcache.ini"
+    - env: CMD="pip install -r requirements/invoke-tasks.txt;
+           invoke cache_all_requirement_wheels"
 
 # Save and restore the contents of wheelhouse for each build
 cache:
@@ -43,4 +48,4 @@ cache:
         - wheelhouse
 
 script:
-    - tox -v -v $TOX_OPTS
+    - sh -c "$CMD"
