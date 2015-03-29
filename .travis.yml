@@ -44,4 +44,5 @@ cache:
 
 script:
     - "echo PIP_FIND_LINKS: $PIP_FIND_LINKS"
+    - ls wheelhouse
     - tox -v -v $TOX_OPTS
