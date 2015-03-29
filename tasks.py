@@ -21,7 +21,7 @@ def _pytest_args():
     # On Python 3 we run doctests in modules. The doctests are PY3 specific due
     # to output formatting differences between PY2 and 3. Also, the doctests
     # are just supplemental examples, not the real tests.
-    args = ["rnginline/"]
+    args = ["--pyargs", "rnginline"]
     if six.PY3:
         return ["--doctest-modules"] + args
     return args
