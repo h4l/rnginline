@@ -136,16 +136,6 @@ data_data_data_uri = ("pydata://rnginline.test/data/"
                       "data-%C9%90%CA%87%C9%90p-data.txt")
 
 
-data_data_data = """\
-This file contains some data which will be loaded by the test_urlhandlers.py
-file to test the PackageDataUrlHandler.
-
-It's got some non-ascii characters in the filename and also here:
-                                                     ʇxǝʇ ᴉᴉɔsɐ-uou uʍop ǝpᴉsdn
-BTW, this file is encoded in UTF-8.
-"""
-
-
 def test_pydata_uri_creation():
     assert type(data_data_data_uri) == six.text_type
     package, path = "rnginline.test", "data/data-ɐʇɐp-data.txt"
@@ -180,14 +170,6 @@ def test_pydata_url_deconstruct_requries_pydata_scheme():
 
 def test_pydata_handler_handles_pydata_uris():
     assert pydata.can_handle(parse.urlsplit(data_data_data_uri))
-
-
-def test_pydata_handler_dereferences_to_correct_data():
-    assert type(data_data_data) == six.text_type
-
-    data = pydata.dereference(parse.urlsplit(data_data_data_uri))
-
-    assert data.decode("utf-8") == data_data_data
 
 
 @pytest.mark.parametrize("url", [
