@@ -1,6 +1,18 @@
 rnginline: Flatten multi-file RELAX NG schemas
 ==============================================
 
+.. image:: https://img.shields.io/travis/h4l/rnginline.svg
+    :target: https://travis-ci.org/h4l/rnginline
+
+.. image:: https://img.shields.io/codecov/c/github/h4l/rnginline/master.svg
+    :target: https://codecov.io/github/h4l/rnginline?ref=master
+
+.. image:: https://img.shields.io/pypi/v/rnginline.svg
+    :target: https://pypi.python.org/pypi/rnginline
+
+.. image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
+    :target: http://rnginline.readthedocs.org/en/latest/
+
 rnginline is a Python library and command-line tool for loading multi-file
 RELAX NG schemas from arbitary URLs, and flattening them into a single RELAX NG
 schema.
