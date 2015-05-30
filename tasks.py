@@ -6,6 +6,7 @@ import os
 import glob
 import itertools
 import operator
+import shutil
 
 import pkg_resources
 from invoke import ctask as task
@@ -15,6 +16,16 @@ import wheel.pep425tags
 
 
 ROOT = path.relpath(path.dirname(__file__))
+
+
+@task
+def clean_build(ctx):
+    shutil.rmtree(path.join(ROOT, "build"))
+
+
+@task
+def clean_dist(ctx):
+    shutil.rmtree(path.join(ROOT, "dist"))
 
 
 def _pytest_args():
@@ -109,7 +120,7 @@ def docs(ctx, builder="html", cache_dir=None, out_dir=None,
                 [path.join(ROOT, "docs/"), out_dir]))
 
 
-@task
+@task(clean_build, clean_dist)
 def build_dists(ctx):
     """Build distribution packages"""
     ctx.run("python setup.py sdist", pty=True)
