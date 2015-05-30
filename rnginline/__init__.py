@@ -24,7 +24,7 @@ from rnginline.exceptions import (
     InvalidGrammarError)
 
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 __all__ = ["inline", "Inliner"]
 
