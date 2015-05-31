@@ -116,7 +116,11 @@ def test_cmdline_from_non_ascii_dir(testcase_dir):
     xml = _external_path(testcase_dir,
                          "data/testcases/xml-base/positive-1.xml")
 
-    with change_dir(tempfile.mkdtemp(suffix="-åß∂ƒ\U00010438-")) as new_dir:
+    suffix = "-åß∂ƒ\U00010438-"
+    if six.PY2:
+        suffix = suffix.encode("utf-8")
+
+    with change_dir(tempfile.mkdtemp(suffix=suffix)) as new_dir:
         inlined_schema = "schema-inlined.rng"
 
         # Generate the inlined schema with the command line tool

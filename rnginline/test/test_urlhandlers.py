@@ -108,9 +108,12 @@ def test_file_url_creates_file_urls():
 
 
 def test_fs_handler_raises_dereference_error_on_missing_files():
-    handle, path = tempfile.mkstemp(suffix="∆˚¬ß∂ƒ")
+    handle, path = tempfile.mkstemp()
     os.close(handle)
     os.unlink(path)
+
+    if six.PY2:
+        path = path.decode("ascii")
 
     url = file.makeurl(path, abs=True)
     with pytest.raises(DereferenceError) as e:
@@ -119,7 +122,12 @@ def test_fs_handler_raises_dereference_error_on_missing_files():
 
 
 def test_fs_handler_reads_file_at_url():
-    handle, path = tempfile.mkstemp(suffix="∆˚¬ß∂ƒ")
+    suffix = "∆˚¬ß∂ƒ"
+    if six.PY2:
+        suffix = suffix.encode("utf-8")
+    handle, path = tempfile.mkstemp(suffix=suffix)
+    if six.PY2:
+        path = path.decode("utf-8")
 
     contents = "This is some text\nblah blah\n´∑®ƒ∂ß˚\n".encode("utf-8")
 
@@ -129,7 +137,7 @@ def test_fs_handler_reads_file_at_url():
     url = file.makeurl(path, abs=True)
     result = file.dereference(parse.urlsplit(url))
     assert result == contents
-    os.unlink(path)
+    os.unlink(path.encode("utf-8") if six.PY2 else path)
 
 
 data_data_data_uri = ("pydata://rnginline.test/data/"
