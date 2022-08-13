@@ -40,7 +40,7 @@ def _load_testcases():
 
         assert positive_cases
         assert not [f for _files in [[schema], positive_cases, negative_cases]
-                    for f in _files if not pr.resource_exists(__name__, f)]
+                    for f in _files if not pr.resource_exists(TESTPKG, f)]
 
         for file in positive_cases:
             testcases.append((schema, file, True))
