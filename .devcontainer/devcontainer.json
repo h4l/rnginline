@@ -1,0 +1,48 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+  "name": "rnginline",
+  "image": "mcr.microsoft.com/devcontainers/base:bullseye",
+
+  "features": {
+    // We support 3.7, but some dev tools (e.g. ipython) require 3.9
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.9" }
+  },
+  "postStartCommand": "pipx install poetry",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestEnabled": true,
+        "python.linting.enabled": true,
+        "python.linting.flake8Enabled": false,
+        "python.linting.pylintEnabled": false,
+        "python.linting.mypyEnabled": true,
+        "python.formatting.provider": "black",
+        "python.analysis.diagnosticSeverityOverrides": {
+          // We use mypy for type checking.
+          "reportGeneralTypeIssues": "none"
+        },
+        "[python]": {
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+          }
+        },
+        // By default vscode gives various args to mypy which conflict with mypy's
+        // conf in pyproject.toml.
+        "python.linting.mypyArgs": [],
+        "isort.importStrategy": "fromEnvironment",
+        "prettier.proseWrap": "always"
+      },
+      "extensions": [
+        "editorconfig.editorconfig",
+        "esbenp.prettier-vscode",
+        "github.vscode-github-actions",
+        "ms-python.isort",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  }
+}

@@ -1,2 +1,0 @@
-restructuredtext-lint
-Pygments

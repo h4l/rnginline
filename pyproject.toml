@@ -1,0 +1,95 @@
+[tool.poetry]
+name = "rnginline"
+version = "1.0.0a0"
+description = "Flatten multi-file RELAX NG schemas"
+readme = "README.md"
+authors = ["Hal Blackburn <hwtb2@cam.ac.uk>"]
+license = "Apache-2.0"
+repository = "https://github.com/h4l/rnginline"
+documentation = "https://rnginline.readthedocs.io/en/latest/"
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup :: XML",
+]
+keywords = ["relaxng", "inline", "lxml", "xml"]
+
+[tool.poetry.scripts]
+rnginline = "rnginline.cmdline:main"
+
+# 3.7 is the oldest supported Python version. Most downloads currently come from
+# 3.8, according to https://pypistats.org/packages/rnginline
+[tool.poetry.dependencies]
+docopt = "^0.6.2"
+lxml = "^4"
+python = "^3.7"
+six = "^1.9.0"
+typing-extensions = "^4.5.0"
+setuptools = "*"
+
+[tool.poetry.group.dev.dependencies]
+tox = "^3.25.1"
+# ipython navigation is broken in 8.12.1
+# https://github.com/ipython/ipython/issues/14051
+ipython = { version = "^8.11, !=8.12.1 ,!=8.13.1", python = ">=3.9" }
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.2"
+mock = "^4.0.3"
+pytest-cov = "^4.0.0"
+
+[tool.poetry.group.lint.dependencies]
+ruff = "^0.0.264"
+
+[tool.poetry.group.tasks.dependencies]
+invoke = "^1.7.1"
+
+[tool.poetry.group.docs.dependencies]
+requests = "^2.28.1"
+sphinx = ">=4,<6"
+
+[tool.poetry.group.readme.dependencies]
+restructuredtext-lint = "^1.4.0"
+Pygments = "^2.13.0"
+
+
+[tool.poetry.group.typing.dependencies]
+mypy = "^1.2.0"
+types-lxml = { version = "^2023.3.28", python = ">=3.8" }
+types-six = "^1.16.21.8"
+types-setuptools = "^67.7.0.1"
+types-mock = "^5.0.0.6"
+
+[tool.poetry.group.fmt.dependencies]
+black = "^23.3.0"
+isort = { version = "^5.12.0", python = "^3.8" }
+
+[tool.mypy]
+# enabled implicitly using mypy daemon, so makes sense to enable it always
+local_partial_types = true
+strict = true
+disallow_any_unimported = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
+show_error_codes = true
+
+[tool.coverage.run]
+omit = ["rnginline/test/*"]
+include = ["rnginline/*"]
+
+[tool.coverage.report]
+exclude_lines = ["if __name__ == .__main__.:", "\\.\\.\\.", "if TYPE_CHECKING:"]
+
+[build-system]
+# We use pre-relese of poetry-core because we need Poetry 1.2 in order to use
+# dependency groups, and at this time 1.2 is still in beta. Dependency groups
+# don't work with the current stable release of poetry-core.
+requires = ["poetry-core>=1.2"]
+build-backend = "poetry.core.masonry.api"
