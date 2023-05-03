@@ -9,8 +9,14 @@ import six
 from six.moves.urllib import parse
 
 from rnginline.exceptions import DereferenceError
-from rnginline.urlhandlers import (reject_bytes, ensure_parsed, quote,
-                                   unquote, file, pydata)
+from rnginline.urlhandlers import (
+    ensure_parsed,
+    file,
+    pydata,
+    quote,
+    reject_bytes,
+    unquote,
+)
 
 
 def test_reject_bytes():
@@ -24,15 +30,10 @@ def test_reject_bytes():
 
 def test_ensure_parsed():
     assert isinstance(ensure_parsed("x:/foo"), parse.SplitResult)
-    assert isinstance(ensure_parsed(parse.urlsplit("x:/foo")),
-                      parse.SplitResult)
+    assert isinstance(ensure_parsed(parse.urlsplit("x:/foo")), parse.SplitResult)
 
 
-@pytest.mark.parametrize("text", [
-    "foo",
-    "ƒß∂åƒ∂ß",
-    "abc\U00010300\U00010410def"
-])
+@pytest.mark.parametrize("text", ["foo", "ƒß∂åƒ∂ß", "abc\U00010300\U00010410def"])
 def test_quoting_roundtrip(text):
     quoted = quote(text)
     unquoted = unquote(quoted)
@@ -49,21 +50,20 @@ def test_quoting_roundtrip(text):
     assert unquoted == text
 
 
-@pytest.mark.parametrize("path,abs,expected_url,expected_path", [
-    ("foo", True, "file:foo", "foo"),
-    ("foo", False, "foo", "foo"),
-    ("foo", None, "foo", "foo"),
-    ("/some/dir/foo", True, "file:/some/dir/foo", "/some/dir/foo"),
-    ("/some/dir/foo", False, "/some/dir/foo", "/some/dir/foo"),
-    ("/some/dir/foo", None, "/some/dir/foo", "/some/dir/foo"),
-
-    ("some dir/foo bar", True,
-     "file:some%20dir/foo%20bar", "some dir/foo bar"),
-    ("some dir/foo bar", False,
-     "some%20dir/foo%20bar", "some dir/foo bar"),
-    ("some dir/foo bar", None,
-     "some%20dir/foo%20bar", "some dir/foo bar")
-])
+@pytest.mark.parametrize(
+    "path,abs,expected_url,expected_path",
+    [
+        ("foo", True, "file:foo", "foo"),
+        ("foo", False, "foo", "foo"),
+        ("foo", None, "foo", "foo"),
+        ("/some/dir/foo", True, "file:/some/dir/foo", "/some/dir/foo"),
+        ("/some/dir/foo", False, "/some/dir/foo", "/some/dir/foo"),
+        ("/some/dir/foo", None, "/some/dir/foo", "/some/dir/foo"),
+        ("some dir/foo bar", True, "file:some%20dir/foo%20bar", "some dir/foo bar"),
+        ("some dir/foo bar", False, "some%20dir/foo%20bar", "some dir/foo bar"),
+        ("some dir/foo bar", None, "some%20dir/foo%20bar", "some dir/foo bar"),
+    ],
+)
 def test_file_url_roundtrip(path, abs, expected_url, expected_path):
     kwargs = {"abs": abs} if abs is not None else {}
     result_url = file.makeurl(path, **kwargs)
@@ -132,8 +132,7 @@ def test_fs_handler_reads_file_at_url():
     os.unlink(path)
 
 
-data_data_data_uri = ("pydata://rnginline.test/data/"
-                      "data-%C9%90%CA%87%C9%90p-data.txt")
+data_data_data_uri = "pydata://rnginline.test/data/" "data-%C9%90%CA%87%C9%90p-data.txt"
 
 
 def test_pydata_uri_creation():
@@ -172,10 +171,13 @@ def test_pydata_handler_handles_pydata_uris():
     assert pydata.can_handle(parse.urlsplit(data_data_data_uri))
 
 
-@pytest.mark.parametrize("url", [
-    pydata.makeurl("rnginline.tset", "data"),  # dir, not file
-    pydata.makeurl("rnginline.tset", "data/jfklsjflsdf.txt")
-])
+@pytest.mark.parametrize(
+    "url",
+    [
+        pydata.makeurl("rnginline.tset", "data"),  # dir, not file
+        pydata.makeurl("rnginline.tset", "data/jfklsjflsdf.txt"),
+    ],
+)
 def test_pydata_handler_raises_dereference_error_on_missing_file(url):
     with pytest.raises(DereferenceError):
         pydata.dereference(url)

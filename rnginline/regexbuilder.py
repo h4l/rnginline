@@ -45,9 +45,9 @@ class Regex(object):
         return self.render()
 
     def __repr__(self):
-        return "<{0} -> ur\"{1}\">".format(
-            type(self).__name__,
-            six.text_type(self).encode("raw_unicode_escape"))
+        return '<{0} -> ur"{1}">'.format(
+            type(self).__name__, six.text_type(self).encode("raw_unicode_escape")
+        )
 
 
 class BaseSequence(Regex):
@@ -70,7 +70,8 @@ class BaseSequence(Regex):
 
     def render(self):
         return self.get_operator().join(
-            self.render_expression(e) for e in self.expressions)
+            self.render_expression(e) for e in self.expressions
+        )
 
 
 class Sequence(BaseSequence):
@@ -91,8 +92,8 @@ class Literal(Regex):
 
     def render(self):
         return "".join(
-            re.escape(char) if self.needs_escape(char) else char
-            for char in self.text)
+            re.escape(char) if self.needs_escape(char) else char for char in self.text
+        )
 
     @classmethod
     def from_codepoint(cls, code_point):
@@ -102,8 +103,9 @@ class Literal(Regex):
         this will create (and match) surrogate pairs for code points above the
         BMP.
         """
-        return cls("\\U{0:08X}".format(code_point)
-                   .encode("ascii").decode("unicode_escape"))
+        return cls(
+            "\\U{0:08X}".format(code_point).encode("ascii").decode("unicode_escape")
+        )
 
 
 class Choice(BaseSequence):
@@ -150,16 +152,14 @@ class Set(Regex):
     def __init__(self, *items):
         if len(items) == 0:
             raise ValueError("empty Set()")
-        self.ranges = [SetRange.create(i)
-                       for i in items if not isinstance(i, Set)]
+        self.ranges = [SetRange.create(i) for i in items if not isinstance(i, Set)]
         # Merge sub set items
-        self.ranges += [range
-                        for set in items if isinstance(set, Set)
-                        for range in set.ranges]
+        self.ranges += [
+            range for set in items if isinstance(set, Set) for range in set.ranges
+        ]
 
     def render(self):
-        contents = "".join(i.render(pos == 0)
-                           for pos, i in enumerate(self.ranges))
+        contents = "".join(i.render(pos == 0) for pos, i in enumerate(self.ranges))
         return "[{0}]".format(contents)
 
     def is_singular(self):
@@ -170,8 +170,7 @@ class Set(Regex):
 class SetRange(object):
     def __init__(self, start, end):
         if end < start:
-            raise ValueError("end < start. start: {0}, end: {1}"
-                             .format(start, end))
+            raise ValueError("end < start. start: {0}, end: {1}".format(start, end))
         self.start = start
         self.end = end
 
@@ -188,8 +187,7 @@ class SetRange(object):
         if len(item) == 2:
             start, end = item
             return SetRange(cls.get_codepoint(start), cls.get_codepoint(end))
-        raise ValueError("Don't know how to create a SetItem from: {0!r}"
-                         .format(item))
+        raise ValueError("Don't know how to create a SetItem from: {0!r}".format(item))
 
     @staticmethod
     def get_codepoint(item):
@@ -215,8 +213,10 @@ class SetRange(object):
         if self.is_single():
             return self.render_char(self.start, is_first)
         else:
-            return "{0}-{1}".format(self.render_char(self.start, is_first),
-                                    self.render_char(self.end, False))
+            return "{0}-{1}".format(
+                self.render_char(self.start, is_first),
+                self.render_char(self.end, False),
+            )
 
     def intersects(self, range):
         start, end = range.start, range.end
@@ -234,8 +234,7 @@ class UnaryOperator(Regex):
 
     def render(self):
         # The subexpression must be singular
-        return "{0}{1}".format(
-            self.expression.render_singular(), self.operator)
+        return "{0}{1}".format(self.expression.render_singular(), self.operator)
 
 
 class Repeat(UnaryOperator):
@@ -249,9 +248,9 @@ class Repeat(UnaryOperator):
 
         assert min is None or min >= 0
         assert max is None or max >= 0
-        assert ((min is None and max is None) or
-                (min is None or max is None) or
-                min <= max), (min, max)
+        assert (
+            (min is None and max is None) or (min is None or max is None) or min <= max
+        ), (min, max)
 
         self.min = min
         self.max = max

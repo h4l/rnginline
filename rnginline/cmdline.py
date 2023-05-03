@@ -1,14 +1,13 @@
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
 
-import sys
 import locale
+import sys
 
 import docopt
 import six
 
-from rnginline import (__version__, inline, uri)
+from rnginline import __version__, inline, uri
 from rnginline.exceptions import RelaxngInlineError
-
 
 # Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
 __doc__ = DOC = """
@@ -99,23 +98,32 @@ def _main(args):
         # user-provided.
         if not uri.is_uri(default_base_uri):
             raise RelaxngInlineError(
-                "The --default-base-uri provided is not a valid URI: {0}"
-                .format(default_base_uri))
+                "The --default-base-uri provided is not a valid URI: {0}".format(
+                    default_base_uri
+                )
+            )
 
     base_uri = None
     if args["--base-uri"]:
         base_uri = py2_decode_bytes(args["--base-uri"])
 
         if not uri.is_uri_reference(base_uri):
-            raise RelaxngInlineError("The --base-uri provided is not a valid "
-                                     "URI-reference: {0}".format(base_uri))
+            raise RelaxngInlineError(
+                "The --base-uri provided is not a valid "
+                "URI-reference: {0}".format(base_uri)
+            )
 
     postprocessors = None  # defaults
     if args["--no-libxml2-compat"]:
         postprocessors = []
 
-    schema = inline(src, postprocessors=postprocessors, create_validator=False,
-                    base_uri=base_uri, default_base_uri=default_base_uri)
+    schema = inline(
+        src,
+        postprocessors=postprocessors,
+        create_validator=False,
+        base_uri=base_uri,
+        default_base_uri=default_base_uri,
+    )
 
     schema.getroottree().write(outfile)
 
@@ -130,8 +138,7 @@ def main(argv=None):
         if args["--traceback"]:
             import traceback
 
-            print("\n--traceback on, full traceback follows:\n",
-                  file=sys.stderr)
+            print("\n--traceback on, full traceback follows:\n", file=sys.stderr)
             traceback.print_exc()
 
         sys.exit(1)

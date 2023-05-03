@@ -1,13 +1,11 @@
 from rnginline import etree
-
 from rnginline.constants import NSMAP, RNG_DATA_TAG, RNG_VALUE_TAG
-
 
 __all__ = ["datatypelibrary"]
 
 _lookup_datatype_library = etree.XPath(
-    "string(ancestor-or-self::*[@datatypeLibrary][position()=1]"
-    "/@datatypeLibrary)")
+    "string(ancestor-or-self::*[@datatypeLibrary][position()=1]" "/@datatypeLibrary)"
+)
 _data_value_els = etree.XPath("//rng:data|//rng:value", namespaces=NSMAP)
 
 
@@ -37,8 +35,10 @@ class PropagateDatatypeLibraryPostProcess(object):
 
         # Strip datatypeLibrary from all other elements
         for element in grammar.iter():
-            if (element.tag not in [RNG_DATA_TAG, RNG_VALUE_TAG] and
-                    "datatypeLibrary" in element.attrib):
+            if (
+                element.tag not in [RNG_DATA_TAG, RNG_VALUE_TAG]
+                and "datatypeLibrary" in element.attrib
+            ):
                 del element.attrib["datatypeLibrary"]
 
         return grammar

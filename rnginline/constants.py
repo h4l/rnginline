@@ -2,7 +2,6 @@ from __future__ import unicode_literals
 
 from lxml import etree
 
-
 RNG_NS = "http://relaxng.org/ns/structure/1.0"
 NSMAP = {"rng": RNG_NS}
 RNG_GRAMMAR_TAG = etree.QName(RNG_NS, "grammar")

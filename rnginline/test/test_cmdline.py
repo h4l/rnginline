@@ -1,25 +1,22 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-import re
 import os
-from os import path
+import re
 import tempfile
 from contextlib import contextmanager
+from os import path
 
-from lxml import etree
 import pkg_resources
 import pytest
 import six
+from lxml import etree
 
-from rnginline import _get_cwd
+from rnginline import _get_cwd, urlhandlers
 from rnginline.cmdline import main as rng_main
-from rnginline.test.mini_validator import main as minival_main
 from rnginline.exceptions import RelaxngInlineError
-from rnginline import urlhandlers
-
-from rnginline.test.test_rnginline import (
-    test_testcases_testcases, ttt_ids)
+from rnginline.test.mini_validator import main as minival_main
+from rnginline.test.test_rnginline import test_testcases_testcases, ttt_ids
 
 
 def _code(sysexit):
@@ -55,13 +52,12 @@ def testcase_dir():
     """
     Extract testcase data to the filesystem for access by command line tools.
     """
-    return pkg_resources.resource_filename("rnginline.test",
-                                           "data/testcases")
+    return pkg_resources.resource_filename("rnginline.test", "data/testcases")
 
 
 def _external_path(testcase_dir, pkg_path):
     assert pkg_path.startswith("data/testcases/")
-    tc_path = pkg_path[len("data/testcases/"):]
+    tc_path = pkg_path[len("data/testcases/") :]
     return path.join(testcase_dir, tc_path)
 
 
@@ -71,8 +67,9 @@ def _cmdline_args(argv):
     return argv
 
 
-@pytest.mark.parametrize("schema_file,test_file,should_match",
-                         test_testcases_testcases, ids=ttt_ids)
+@pytest.mark.parametrize(
+    "schema_file,test_file,should_match", test_testcases_testcases, ids=ttt_ids
+)
 def test_cmdline(testcase_dir, schema_file, test_file, should_match):
     schema_external = _external_path(testcase_dir, schema_file)
     xml_external = _external_path(testcase_dir, test_file)
@@ -86,8 +83,7 @@ def test_cmdline(testcase_dir, schema_file, test_file, should_match):
         rng_main(argv=_cmdline_args([schema_external, inlined_schema]))
     except SystemExit as e:
         if e.code not in [None, 0]:
-            pytest.fail("rnginline.cmdline exited with status: {0}"
-                        .format(e.code))
+            pytest.fail("rnginline.cmdline exited with status: {0}".format(e.code))
 
     try:
         minival_main(argv=_cmdline_args([inlined_schema, xml_external]))
@@ -103,18 +99,19 @@ def test_cmdline(testcase_dir, schema_file, test_file, should_match):
 
     if should_match:
         if status != 0:
-            pytest.fail("{0} should match {1} but didn't"
-                        .format(test_file, schema_file))
+            pytest.fail(
+                "{0} should match {1} but didn't".format(test_file, schema_file)
+            )
     else:
         if status != 2:
-            pytest.fail("{0} shouldn't match {1} but did"
-                        .format(test_file, schema_file))
+            pytest.fail(
+                "{0} shouldn't match {1} but did".format(test_file, schema_file)
+            )
 
 
 def test_cmdline_from_non_ascii_dir(testcase_dir):
     schema = _external_path(testcase_dir, "data/testcases/xml-base/schema.rng")
-    xml = _external_path(testcase_dir,
-                         "data/testcases/xml-base/positive-1.xml")
+    xml = _external_path(testcase_dir, "data/testcases/xml-base/positive-1.xml")
 
     with change_dir(tempfile.mkdtemp(suffix="-åß∂ƒ\U00010438-")) as new_dir:
         inlined_schema = "schema-inlined.rng"
@@ -129,10 +126,10 @@ def test_cmdline_from_non_ascii_dir(testcase_dir):
     os.rmdir(new_dir)
 
 
-@pytest.mark.parametrize("base_arg",
-                         ["--default-base-uri", "--base-uri", "-b"])
-@pytest.mark.parametrize("stdout_arg", [[], ["-"]],
-                         ids=["implicit stdout", "minus char"])
+@pytest.mark.parametrize("base_arg", ["--default-base-uri", "--base-uri", "-b"])
+@pytest.mark.parametrize(
+    "stdout_arg", [[], ["-"]], ids=["implicit stdout", "minus char"]
+)
 def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
     # Note that using stdin is rather awkward as it means we don't know what
     # the base URI of the input is. So that has to be set explicitly using
@@ -141,15 +138,19 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
     schema_path = "data/testcases/xml-base/schema.rng"
 
     schema_bytes = urlhandlers.pydata.dereference(
-        urlhandlers.pydata.makeurl("rnginline.test", schema_path))
+        urlhandlers.pydata.makeurl("rnginline.test", schema_path)
+    )
     xml_bytes = urlhandlers.pydata.dereference(
-        urlhandlers.pydata.makeurl("rnginline.test",
-                                   "data/testcases/xml-base/positive-1.xml"))
+        urlhandlers.pydata.makeurl(
+            "rnginline.test", "data/testcases/xml-base/positive-1.xml"
+        )
+    )
 
     # The default base URI must be a URI rather than URI-reference
     is_abs = base_arg == "--default-base-uri"
-    base = urlhandlers.file.makeurl(_external_path(testcase_dir, schema_path),
-                                    abs=is_abs)
+    base = urlhandlers.file.makeurl(
+        _external_path(testcase_dir, schema_path), abs=is_abs
+    )
 
     new_stdin = six.BytesIO(schema_bytes)
     new_stdout = six.BytesIO()
@@ -160,16 +161,14 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
     monkeypatch.setattr("sys.stdout", new_stdout)
 
     # Generate the inlined schema with the command line tool
-    rng_main(argv=_cmdline_args(
-        [base_arg, base, "--stdin"] + stdout_arg))
+    rng_main(argv=_cmdline_args([base_arg, base, "--stdin"] + stdout_arg))
 
     new_stdout.seek(0)
     schema = etree.RelaxNG(file=new_stdout)
     assert schema(etree.XML(xml_bytes))
 
 
-@pytest.mark.parametrize("base_uri_arg",
-                         ["--default-base-uri", "--base-uri", "-b"])
+@pytest.mark.parametrize("base_uri_arg", ["--default-base-uri", "--base-uri", "-b"])
 def test_cmdline_rejects_invalid_base_uri(base_uri_arg, monkeypatch):
     bad_uri = "/foo bar"  # contains a space
 
@@ -195,6 +194,7 @@ def test_cmdline_traceback_produces_traceback(monkeypatch):
     class Boomer(object):
         def read(self):
             raise MyTestingRngError("boom!")
+
     stdin = Boomer()
     stdin.buffer = stdin  # emulate sys.stdin.buffer for Py 3
     monkeypatch.setattr("sys.stdin", stdin)
@@ -206,20 +206,24 @@ def test_cmdline_traceback_produces_traceback(monkeypatch):
     assert re.search("""MyTestingRngError\(.boom!.\)""", stderr.read())
 
 
-@pytest.mark.parametrize("compat_arg,should_match_input", [
-    # If libxml2 compat is disabled then the output will match the input
-    (["--no-libxml2-compat"], True),
-    # If compat's on (the default) then the input will be modified to put
-    # datatypeLibrary on the data el.
-    ([], False)
-])
+@pytest.mark.parametrize(
+    "compat_arg,should_match_input",
+    [
+        # If libxml2 compat is disabled then the output will match the input
+        (["--no-libxml2-compat"], True),
+        # If compat's on (the default) then the input will be modified to put
+        # datatypeLibrary on the data el.
+        ([], False),
+    ],
+)
 def test_cmdline_no_libxml2_compat_disables_compat(
-        compat_arg, should_match_input, monkeypatch):
+    compat_arg, should_match_input, monkeypatch
+):
     input = (
         '<element name="start" xmlns="http://relaxng.org/ns/structure/1.0" '
         'datatypeLibrary="foo">'
         '<data type="bar"/>'
-        '</element>'
+        "</element>"
     )
     input = etree.tostring(etree.XML(input), method="c14n")
 

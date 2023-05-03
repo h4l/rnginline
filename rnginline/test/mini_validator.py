@@ -3,7 +3,7 @@ A very simple program to check if an XML file matches a RELAX NG schema.
 
 usage: mini_validator <rngfile> <xmlfile>
 """
-from __future__ import unicode_literals, print_function
+from __future__ import print_function, unicode_literals
 
 import sys
 

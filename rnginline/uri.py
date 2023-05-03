@@ -6,13 +6,11 @@ This module contains URI related functions, implemented according to
 """
 from __future__ import unicode_literals
 
-from six.moves.urllib.parse import urlsplit, SplitResult
+from six.moves.urllib.parse import SplitResult, urlsplit
 
 from rnginline import uri_regex
 
-
-__all__ = ["UriSyntaxError", "is_uri", "is_uri_reference", "resolve",
-           "recombine"]
+__all__ = ["UriSyntaxError", "is_uri", "is_uri_reference", "resolve", "recombine"]
 
 
 class UriSyntaxError(ValueError):
@@ -56,8 +54,9 @@ def resolve(base, reference, strict=True):
     if not is_uri(base):
         raise UriSyntaxError("base was not a valid URI: {0}".format(base))
     if not is_uri_reference(reference):
-        raise UriSyntaxError("reference was not a valid URI-reference: {0}"
-                             .format(reference))
+        raise UriSyntaxError(
+            "reference was not a valid URI-reference: {0}".format(reference)
+        )
 
     b, ref = urlsplit(base), urlsplit(reference)
 
@@ -168,7 +167,8 @@ def recombine(spliturl):
     if netloc and path and not path.startswith("/"):
         raise UriSyntaxError(
             "With a netloc present the path must be absolute or empty. "
-            "path: {0}".format(path))
+            "path: {0}".format(path)
+        )
 
     if scheme:
         out.append(scheme)

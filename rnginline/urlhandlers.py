@@ -17,9 +17,8 @@ import six
 from six.moves.urllib import parse
 from six.moves.urllib.request import pathname2url, url2pathname
 
-from rnginline.exceptions import DereferenceError
 from rnginline import uri
-
+from rnginline.exceptions import DereferenceError
 
 __all__ = ["file", "pydata"]
 
@@ -34,9 +33,10 @@ def reject_bytes(**kwargs):
     for name, value in kwargs.items():
         if isinstance(value, six.binary_type):
             raise ValueError(
-                "Use {0} for {1}, not {2}. got: {3!r}"
-                .format(six.text_type.__name__, name, six.binary_type.__name__,
-                        value))
+                "Use {0} for {1}, not {2}. got: {3!r}".format(
+                    six.text_type.__name__, name, six.binary_type.__name__, value
+                )
+            )
 
 
 def ensure_parsed(uri):
@@ -92,8 +92,9 @@ def unquote(uri_encoded_text, unquoting_func=parse.unquote):
 
 def _validate_py_pkg_name(package):
     if not PACKAGE.match(package):
-        raise ValueError("package is not a valid Python package name: {0}"
-                         .format(package))
+        raise ValueError(
+            "package is not a valid Python package name: {0}".format(package)
+        )
 
 
 class FilesystemUrlHandler(object):
@@ -146,8 +147,10 @@ class FilesystemUrlHandler(object):
                 return f.read()
         except IOError as cause:
             err = DereferenceError(
-                "Unable to dereference file url: {0} : {1}"
-                .format(uri.recombine(url), cause))
+                "Unable to dereference file url: {0} : {1}".format(
+                    uri.recombine(url), cause
+                )
+            )
             six.raise_from(err, cause)
 
     @staticmethod
@@ -208,11 +211,12 @@ class FilesystemUrlHandler(object):
         scheme, _, path, _, _ = url
 
         if scheme not in ("file", ""):
-            raise ValueError("Expected a file: or scheme-less (relative) URL, "
-                             "got: {0}".format(uri.recombine(url)))
+            raise ValueError(
+                "Expected a file: or scheme-less (relative) URL, "
+                "got: {0}".format(uri.recombine(url))
+            )
 
-        return unquote(ensure_parsed(file_url).path,
-                       unquoting_func=url2pathname)
+        return unquote(ensure_parsed(file_url).path, unquoting_func=url2pathname)
 
 
 class PackageDataUrlHandler(object):
@@ -263,8 +267,7 @@ class PackageDataUrlHandler(object):
         data = pkgutil.get_data(package, pkg_path)
 
         if data is None:
-            raise DereferenceError("Unable to dereference url: {0}"
-                                   .format(url))
+            raise DereferenceError("Unable to dereference url: {0}".format(url))
 
         return data
 
@@ -289,8 +292,9 @@ class PackageDataUrlHandler(object):
         _validate_py_pkg_name(package)
 
         if resource_path.startswith("/"):
-            raise ValueError("resource_path must not start with a slash: {0}"
-                             .format(resource_path))
+            raise ValueError(
+                "resource_path must not start with a slash: {0}".format(resource_path)
+            )
 
         path = quote("/" + resource_path)
 
