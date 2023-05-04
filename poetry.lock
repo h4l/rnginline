@@ -337,15 +337,19 @@ files = [
 ]
 
 [[package]]
-name = "docopt"
-version = "0.6.2"
-description = "Pythonic argument parser, that will make you smile"
+name = "docopt-ng"
+version = "0.8.1"
+description = "Jazzband-maintained fork of docopt, the humane command line arguments parser."
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 files = [
-    {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},
+    {file = "docopt-ng-0.8.1.tar.gz", hash = "sha256:ea6a61a288fc864eee6b22d6fe28aa202d59fc86fad05f16ff5e39cc4ea7f6e3"},
+    {file = "docopt_ng-0.8.1-py2.py3-none-any.whl", hash = "sha256:ea16004a8b6dd703ac9d8d2a432c5b5e793d7a946f1134a05859e298a7af53bb"},
 ]
+
+[package.extras]
+dev = ["black", "build", "flake8", "mypy", "pre-commit", "pytest", "pytest-cov", "pytest-mypy", "twine"]
 
 [[package]]
 name = "docutils"
@@ -1552,4 +1556,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "c5f99e4288d1f3ea5cb508fd735579d661f047562bb1d75e265fe2eb95d28178"
+content-hash = "e2417321a7e10748a62f2065ba9de818afd753871855c02a136b55574df40044"

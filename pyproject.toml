@@ -27,7 +27,7 @@ rnginline = "rnginline.cmdline:main"
 # 3.7 is the oldest supported Python version. Most downloads currently come from
 # 3.8, according to https://pypistats.org/packages/rnginline
 [tool.poetry.dependencies]
-docopt = "^0.6.2"
+docopt-ng = "^0.8.1"
 lxml = "^4"
 python = "^3.7"
 six = "^1.9.0"

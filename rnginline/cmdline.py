@@ -9,8 +9,14 @@ import six
 from rnginline import __version__, inline, uri
 from rnginline.exceptions import RelaxngInlineError
 
-# Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
-__doc__ = DOC = """
+# - Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
+# - We format spaces into blank lines to work around a bug in docopt-ng's usage
+#   parser.
+# TODO: maybe replace docopt-ng with another CLI parser. Aside from the parser
+# problem, it produces confusing/nonsensical error messages when a user uses
+# incorrect CLI options. I'm not happy about with this program producing such
+# messages.
+__doc__ = DOC = f"""
 Flatten a hierachy of RELAX NG schemas into a single schema by recursively
 inlining <include>/<externalRef> elements.
 
@@ -20,40 +26,40 @@ usage: rnginline [options] <rng-src> [<rng-output>]
 options:
     <rng-src>
         Filesystem path or a URL of the .rng file to inline.
-
+{" "}
     <rng-output>
         Filesystem path to write the inlined schema to. If not provided, or is
         -, stdout is written to.
-
+{" "}
     --traceback
         Print the Python traceback on errors.
-
+{" "}
     --no-libxml2-compat
         Don't apply a workaround to make the output compatible with versions of
         libxml2 affected by bug:
             https://bugzilla.gnome.org/show_bug.cgi?id=744146
-
+{" "}
     --version
         Print the version and exit.
-
+{" "}
     --help, -h
         Show this help.
-
+{" "}
 advanced options:
     --stdin
         Read the schema from stdin instead of from a URL or path.
-
+{" "}
         Note that reading from stdin will result in the location of the schema
         being unknown to this program, so relative hrefs in the schema will
         be resolved relative to the current directory, rather than the schema's
         location. This is usually not what you want, hence this option being
         explicitly required. You should almost certainly use --base-uri along
         with this option.
-
+{" "}
     --base-uri, -b <URI-reference>
         Replace the implicit URI of the input with the given URI. Only required
         when using stdin or something odd/advanced. Can be a relative URI.
-
+{" "}
     --default-base-uri <URI>
         Override the default base URI, which is file:<current dir> (ending in
         a /). The schema's base URI (e.g. the location it was loaded from, or
