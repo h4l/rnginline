@@ -1,15 +1,16 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import annotations
 
+import io
 import os
 import re
 import tempfile
 from contextlib import contextmanager
 from os import path
+from typing import Generator
+from unittest.mock import Mock
 
 import pkg_resources
 import pytest
-import six
 from lxml import etree
 
 from rnginline import _get_cwd, urlhandlers
@@ -19,7 +20,7 @@ from rnginline.test.mini_validator import main as minival_main
 from rnginline.test.test_rnginline import test_testcases_testcases, ttt_ids
 
 
-def _code(sysexit):
+def _code(sysexit: SystemExit | int) -> str | int | None:
     # For some py.test's ExceptionInfo objects in Py26 have an int for the
     # .value attr instead of the actual exception.
     if isinstance(sysexit, int):
@@ -28,14 +29,14 @@ def _code(sysexit):
 
 
 @contextmanager
-def change_dir(path):
+def change_dir(path: str) -> Generator[str, None, None]:
     old_cwd = _get_cwd()
     os.chdir(path)
     yield path
     os.chdir(old_cwd)
 
 
-def test_change_dir():
+def test_change_dir() -> None:
     old_cwd = _get_cwd()
     new_dir = tempfile.mkdtemp()
 
@@ -48,29 +49,25 @@ def test_change_dir():
 
 
 @pytest.fixture(scope="module")
-def testcase_dir():
+def testcase_dir() -> str:
     """
     Extract testcase data to the filesystem for access by command line tools.
     """
     return pkg_resources.resource_filename("rnginline.test", "data/testcases")
 
 
-def _external_path(testcase_dir, pkg_path):
+def _external_path(testcase_dir: str, pkg_path: str) -> str:
     assert pkg_path.startswith("data/testcases/")
     tc_path = pkg_path[len("data/testcases/") :]
     return path.join(testcase_dir, tc_path)
 
 
-def _cmdline_args(argv):
-    if six.PY2:
-        return [a.encode("utf-8") for a in argv]
-    return argv
-
-
 @pytest.mark.parametrize(
     "schema_file,test_file,should_match", test_testcases_testcases, ids=ttt_ids
 )
-def test_cmdline(testcase_dir, schema_file, test_file, should_match):
+def test_cmdline(
+    testcase_dir: str, schema_file: str, test_file: str, should_match: bool
+) -> None:
     schema_external = _external_path(testcase_dir, schema_file)
     xml_external = _external_path(testcase_dir, test_file)
 
@@ -80,14 +77,14 @@ def test_cmdline(testcase_dir, schema_file, test_file, should_match):
 
     # Generate the inlined schema with the command line tool
     try:
-        rng_main(argv=_cmdline_args([schema_external, inlined_schema]))
+        rng_main(argv=[schema_external, inlined_schema])
     except SystemExit as e:
         if e.code not in [None, 0]:
             pytest.fail("rnginline.cmdline exited with status: {0}".format(e.code))
 
     try:
-        minival_main(argv=_cmdline_args([inlined_schema, xml_external]))
-        status = 0
+        minival_main(argv=[inlined_schema, xml_external])
+        status: str | int | None = 0
     except SystemExit as e:
         status = 0 if e.code is None else e.code
 
@@ -109,7 +106,7 @@ def test_cmdline(testcase_dir, schema_file, test_file, should_match):
             )
 
 
-def test_cmdline_from_non_ascii_dir(testcase_dir):
+def test_cmdline_from_non_ascii_dir(testcase_dir: str) -> None:
     schema = _external_path(testcase_dir, "data/testcases/xml-base/schema.rng")
     xml = _external_path(testcase_dir, "data/testcases/xml-base/positive-1.xml")
 
@@ -117,10 +114,10 @@ def test_cmdline_from_non_ascii_dir(testcase_dir):
         inlined_schema = "schema-inlined.rng"
 
         # Generate the inlined schema with the command line tool
-        rng_main(argv=_cmdline_args([path.relpath(schema), inlined_schema]))
+        rng_main(argv=[path.relpath(schema), inlined_schema])
 
         # Validate the generated schema matches the expected xml
-        minival_main(argv=_cmdline_args([inlined_schema, path.relpath(xml)]))
+        minival_main(argv=[inlined_schema, path.relpath(xml)])
 
         os.unlink(inlined_schema)
     os.rmdir(new_dir)
@@ -130,7 +127,12 @@ def test_cmdline_from_non_ascii_dir(testcase_dir):
 @pytest.mark.parametrize(
     "stdout_arg", [[], ["-"]], ids=["implicit stdout", "minus char"]
 )
-def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
+def test_cmdline_stdin_stdout(
+    testcase_dir: str,
+    stdout_arg: list[str],
+    base_arg: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     # Note that using stdin is rather awkward as it means we don't know what
     # the base URI of the input is. So that has to be set explicitly using
     # --default-base-uri.
@@ -152,16 +154,16 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
         _external_path(testcase_dir, schema_path), abs=is_abs
     )
 
-    new_stdin = six.BytesIO(schema_bytes)
-    new_stdout = six.BytesIO()
-    new_stdin.buffer = new_stdin  # fake sys.stdin.buffer for Py 3
-    new_stdout.buffer = new_stdout
+    new_stdin = io.BytesIO(schema_bytes)
+    new_stdout = io.BytesIO()
 
-    monkeypatch.setattr("sys.stdin", new_stdin)
-    monkeypatch.setattr("sys.stdout", new_stdout)
+    monkeypatch.setattr("sys.stdin", Mock())
+    monkeypatch.setattr("sys.stdin.buffer", new_stdin)
+    monkeypatch.setattr("sys.stdout", Mock())
+    monkeypatch.setattr("sys.stdout.buffer", new_stdout)
 
     # Generate the inlined schema with the command line tool
-    rng_main(argv=_cmdline_args([base_arg, base, "--stdin"] + stdout_arg))
+    rng_main(argv=[base_arg, base, "--stdin"] + stdout_arg)
 
     new_stdout.seek(0)
     schema = etree.RelaxNG(file=new_stdout)
@@ -169,22 +171,24 @@ def test_cmdline_stdin_stdout(testcase_dir, stdout_arg, base_arg, monkeypatch):
 
 
 @pytest.mark.parametrize("base_uri_arg", ["--default-base-uri", "--base-uri", "-b"])
-def test_cmdline_rejects_invalid_base_uri(base_uri_arg, monkeypatch):
+def test_cmdline_rejects_invalid_base_uri(
+    base_uri_arg: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
     bad_uri = "/foo bar"  # contains a space
 
-    stderr = six.StringIO()
+    stderr = io.StringIO()
     monkeypatch.setattr("sys.stderr", stderr)
 
     with pytest.raises(SystemExit) as excinfo:
-        rng_main(argv=_cmdline_args([base_uri_arg, bad_uri, "/dev/null"]))
+        rng_main(argv=[base_uri_arg, bad_uri, "/dev/null"])
     stderr.seek(0)
 
     assert _code(excinfo.value) == 1
     assert "base-uri" in stderr.read()
 
 
-def test_cmdline_traceback_produces_traceback(monkeypatch):
-    stderr = six.StringIO()
+def test_cmdline_traceback_produces_traceback(monkeypatch: pytest.MonkeyPatch) -> None:
+    stderr = io.StringIO()
     monkeypatch.setattr("sys.stderr", stderr)
 
     # Patch stdin to blow up when read is called
@@ -192,18 +196,18 @@ def test_cmdline_traceback_produces_traceback(monkeypatch):
         pass
 
     class Boomer(object):
-        def read(self):
+        def read(self) -> None:
             raise MyTestingRngError("boom!")
 
     stdin = Boomer()
-    stdin.buffer = stdin  # emulate sys.stdin.buffer for Py 3
-    monkeypatch.setattr("sys.stdin", stdin)
+    monkeypatch.setattr("sys.stdin", Mock())
+    monkeypatch.setattr("sys.stdin.buffer", stdin)
 
     with pytest.raises(SystemExit):
-        rng_main(argv=_cmdline_args(["--traceback", "--stdin"]))
+        rng_main(argv=["--traceback", "--stdin"])
     stderr.seek(0)
 
-    assert re.search("""MyTestingRngError\(.boom!.\)""", stderr.read())
+    assert re.search(r"MyTestingRngError\(.boom!.\)", stderr.read())
 
 
 @pytest.mark.parametrize(
@@ -217,25 +221,25 @@ def test_cmdline_traceback_produces_traceback(monkeypatch):
     ],
 )
 def test_cmdline_no_libxml2_compat_disables_compat(
-    compat_arg, should_match_input, monkeypatch
-):
-    input = (
+    compat_arg: list[str], should_match_input: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_xml = (
         '<element name="start" xmlns="http://relaxng.org/ns/structure/1.0" '
         'datatypeLibrary="foo">'
         '<data type="bar"/>'
         "</element>"
     )
-    input = etree.tostring(etree.XML(input), method="c14n")
+    input = etree.tostring(etree.XML(input_xml), method="c14n")
 
-    stdin = six.BytesIO(input)
-    stdout = six.BytesIO()
-    stdin.buffer = stdin
-    stdout.buffer = stdout
+    stdin = io.BytesIO(input)
+    stdout = io.BytesIO()
 
-    monkeypatch.setattr("sys.stdin", stdin)
-    monkeypatch.setattr("sys.stdout", stdout)
+    monkeypatch.setattr("sys.stdin", Mock())
+    monkeypatch.setattr("sys.stdin.buffer", stdin)
+    monkeypatch.setattr("sys.stdout", Mock())
+    monkeypatch.setattr("sys.stdout.buffer", stdout)
 
-    rng_main(argv=_cmdline_args(compat_arg + ["--stdin"]))
+    rng_main(argv=compat_arg + ["--stdin"])
     stdout.seek(0)
     output = etree.tostring(etree.XML(stdout.read()), method="c14n")
 

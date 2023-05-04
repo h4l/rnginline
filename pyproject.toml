@@ -30,7 +30,6 @@ rnginline = "rnginline.cmdline:main"
 docopt-ng = "^0.8.1"
 lxml = "^4"
 python = "^3.7"
-six = "^1.9.0"
 typing-extensions = "^4.5.0"
 setuptools = "*"
 
@@ -42,7 +41,6 @@ ipython = { version = "^8.11, !=8.12.1 ,!=8.13.1", python = ">=3.9" }
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.1.2"
-mock = "^4.0.3"
 pytest-cov = "^4.0.0"
 
 [tool.poetry.group.lint.dependencies]
@@ -63,9 +61,7 @@ Pygments = "^2.13.0"
 [tool.poetry.group.typing.dependencies]
 mypy = "^1.2.0"
 types-lxml = { version = "^2023.3.28", python = ">=3.8" }
-types-six = "^1.16.21.8"
 types-setuptools = "^67.7.0.1"
-types-mock = "^5.0.0.6"
 
 [tool.poetry.group.fmt.dependencies]
 black = "^23.3.0"

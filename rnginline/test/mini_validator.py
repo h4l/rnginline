@@ -3,7 +3,7 @@ A very simple program to check if an XML file matches a RELAX NG schema.
 
 usage: mini_validator <rngfile> <xmlfile>
 """
-from __future__ import print_function, unicode_literals
+from __future__ import annotations
 
 import sys
 
@@ -11,7 +11,7 @@ import docopt
 from lxml import etree
 
 
-def main(argv=None):
+def main(argv: list[str] | str | None = None) -> None:
     try:
         validate(argv)
     except Exception as e:
@@ -19,7 +19,7 @@ def main(argv=None):
         sys.exit(1)
 
 
-def validate(argv):
+def validate(argv: list[str] | str | None) -> None:
     options = docopt.docopt(__doc__, argv=argv)
 
     xml = etree.parse(options["<xmlfile>"])

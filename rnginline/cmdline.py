@@ -1,13 +1,15 @@
-from __future__ import print_function, unicode_literals
+from __future__ import annotations
 
 import locale
 import sys
+from typing import BinaryIO, Sequence, Union, cast
 
 import docopt
-import six
+from typing_extensions import TypedDict
 
 from rnginline import __version__, inline, uri
 from rnginline.exceptions import RelaxngInlineError
+from rnginline.postprocess import PostProcessor
 
 # - Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
 # - We format spaces into blank lines to work around a bug in docopt-ng's usage
@@ -70,56 +72,61 @@ advanced options:
         URI with a scheme, not a URI-reference.
 """
 
+ParsedArgs = TypedDict(
+    "ParsedArgs",
+    {
+        "<rng-src>": Union[str, None],
+        "<rng-output>": Union[str, None],
+        "--traceback": bool,
+        "--no-libxml2-compat": bool,
+        "--version": bool,
+        "--help": bool,
+        "-h": bool,
+        "--stdin": bool,
+        "--base-uri": Union[str, None],
+        "--default-base-uri": Union[str, None],
+    },
+)
 
-def py2_decode_bytes(cmdline_argument):
-    if not isinstance(cmdline_argument, six.string_types):
-        return cmdline_argument
 
-    # Python 2 provides command line args as bytes rather than text
-    if six.PY2:
-        assert isinstance(cmdline_argument, six.binary_type)
-        encoding = locale.getdefaultlocale()[1] or "ascii"
-        return cmdline_argument.decode(encoding)
-
-    assert isinstance(cmdline_argument, six.text_type)
-    return cmdline_argument
-
-
-def _main(args):
+def _main(args: ParsedArgs) -> None:
+    src: str | BinaryIO
     if args["--stdin"]:
-        src = sys.stdin.buffer if six.PY3 else sys.stdin
+        src = sys.stdin.buffer
     else:
-        src = py2_decode_bytes(args["<rng-src>"])
+        assert isinstance(args["<rng-src>"], str)
+        src = args["<rng-src>"]
 
-    outfile = py2_decode_bytes(args["<rng-output>"])
+    outfile: str | BinaryIO
+    outfile_name = args["<rng-output>"]
 
-    if outfile is None or outfile == "-":
-        outfile = sys.stdout.buffer if six.PY3 else sys.stdout
+    if outfile_name is None or outfile_name == "-":
+        outfile = sys.stdout.buffer
+    else:
+        outfile = outfile_name
 
     default_base_uri = None
     if args["--default-base-uri"]:
-        default_base_uri = py2_decode_bytes(args["--default-base-uri"])
+        default_base_uri = args["--default-base-uri"]
         # Need to validate this here, as it's considered a coding error to pass
         # an invalid URI to Inliner as default_base_uri, but this URI is
         # user-provided.
         if not uri.is_uri(default_base_uri):
             raise RelaxngInlineError(
-                "The --default-base-uri provided is not a valid URI: {0}".format(
-                    default_base_uri
-                )
+                "The --default-base-uri provided is not a valid URI: "
+                f"{default_base_uri}"
             )
 
     base_uri = None
     if args["--base-uri"]:
-        base_uri = py2_decode_bytes(args["--base-uri"])
+        base_uri = args["--base-uri"]
 
         if not uri.is_uri_reference(base_uri):
             raise RelaxngInlineError(
-                "The --base-uri provided is not a valid "
-                "URI-reference: {0}".format(base_uri)
+                "The --base-uri provided is not a valid " f"URI-reference: {base_uri}"
             )
 
-    postprocessors = None  # defaults
+    postprocessors: Sequence[PostProcessor] | None = None  # defaults
     if args["--no-libxml2-compat"]:
         postprocessors = []
 
@@ -134,12 +141,12 @@ def _main(args):
     schema.getroottree().write(outfile)
 
 
-def main(argv=None):
-    args = docopt.docopt(DOC, version=__version__, argv=argv)
+def main(argv: list[str] | None = None) -> None:
+    args = cast(ParsedArgs, docopt.docopt(DOC, version=__version__, argv=argv))
     try:
         _main(args)
     except RelaxngInlineError as e:
-        print("fatal: {0}".format(e), file=sys.stderr)
+        print(f"fatal: {e}", file=sys.stderr)
 
         if args["--traceback"]:
             import traceback

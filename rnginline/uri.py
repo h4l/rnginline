@@ -4,20 +4,25 @@ This module contains URI related functions, implemented according to
 
 .. _RFC 3986: https://tools.ietf.org/html/rfc3986
 """
-from __future__ import unicode_literals
+from __future__ import annotations
 
-from six.moves.urllib.parse import SplitResult, urlsplit
+from typing import Union
+from urllib.parse import SplitResult, urlsplit
 
 from rnginline import uri_regex
 
 __all__ = ["UriSyntaxError", "is_uri", "is_uri_reference", "resolve", "recombine"]
+
+SplitResultInput = Union[
+    SplitResult, "tuple[str | None, str | None, str | None, str | None, str | None]"
+]
 
 
 class UriSyntaxError(ValueError):
     pass
 
 
-def is_uri(text):
+def is_uri(text: str) -> bool:
     """
     Checks if text matches the "URI" grammar rule from RFC 3986.
 
@@ -27,7 +32,7 @@ def is_uri(text):
     return _matches_uri_pattern_rule("URI", text)
 
 
-def is_uri_reference(text):
+def is_uri_reference(text: str) -> bool:
     """
     Checks if text matches the "URI-reference" grammar rule from RFC 3986.
 
@@ -37,11 +42,11 @@ def is_uri_reference(text):
     return _matches_uri_pattern_rule("URI-reference", text)
 
 
-def _matches_uri_pattern_rule(rule, text):
+def _matches_uri_pattern_rule(rule: uri_regex.RfcName, text: str) -> bool:
     return bool(uri_regex.get_regex(rule).match(text))
 
 
-def resolve(base, reference, strict=True):
+def resolve(base: str, reference: str, strict: bool = True) -> str:
     """
     Resolve a reference URI against a base URI to form a target URI.
 
@@ -95,7 +100,7 @@ def resolve(base, reference, strict=True):
     return recombine(SplitResult(scheme, authority, path, query, fragment))
 
 
-def _merge(base, ref_path):
+def _merge(base: SplitResult, ref_path: str) -> str:
     """
     Resolve ref_path against the base path.
 
@@ -110,14 +115,14 @@ def _merge(base, ref_path):
     return "/".join(base_parts[:-1] + ref_path.split("/"))
 
 
-def _remove_dot_segments(path):
+def _remove_dot_segments(path: str) -> str:
     """
     Remove . and .. segments from path.
 
     Implements 5.2.4. Remove Dot Segments.
     """
     input = path
-    output = []
+    output: list[str] = []
 
     while input:
         # A
@@ -154,7 +159,7 @@ def _remove_dot_segments(path):
     return "".join(output)
 
 
-def recombine(spliturl):
+def recombine(spliturl: SplitResultInput) -> str:
     """
     Combine a SplitResult into a URI string.
 
@@ -178,7 +183,7 @@ def recombine(spliturl):
         out.append("//")
         out.append(netloc)
 
-    out.append(path)
+    out.append(path or "")
 
     if query:
         out.append("?")

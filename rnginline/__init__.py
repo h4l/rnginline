@@ -1,18 +1,30 @@
-from __future__ import unicode_literals
+from __future__ import annotations
 
 import collections
 import contextlib
 import copy
 import operator
 import os
-import pkgutil
 import re
 import uuid
+from dataclasses import dataclass, field
 from functools import reduce
 from os import path
+from typing import (
+    BinaryIO,
+    ContextManager,
+    Generator,
+    Iterable,
+    Mapping,
+    Sequence,
+    TextIO,
+    Union,
+    cast,
+    overload,
+)
 
-import six
 from lxml import etree
+from typing_extensions import Final, Literal, Protocol
 
 from rnginline import postprocess, uri, urlhandlers
 from rnginline.constants import (
@@ -51,25 +63,74 @@ NOT_ESCAPED = "".join(
 NEEDS_ESCAPE_RE = re.compile("[^{0}]".format(re.escape(NOT_ESCAPED)).encode("ascii"))
 
 RELAXNG_SCHEMA = etree.RelaxNG(
-    etree.fromstring(pkgutil.get_data("rnginline", "relaxng.rng"))
+    etree.fromstring(urlhandlers.pydata.dereference("pydata://rnginline/relaxng.rng"))
 )
 
 _etree = etree  # maintain access to etree in methods w/ etree param.
 
 
+AnyInlineSrc = Union[
+    str,
+    "os.PathLike[str]",
+    TextIO,
+    BinaryIO,
+    etree._Element,
+    "etree._ElementTree[etree._Element]",
+    None,
+]
+
+
+@overload
 def inline(
-    src=None,
-    etree=None,
-    url=None,
-    path=None,
-    file=None,
-    handlers=None,
-    postprocessors=None,
-    create_validator=True,
-    base_uri=None,
-    default_base_uri=None,
-    inliner=None,
-):
+    src: AnyInlineSrc = ...,
+    *,
+    etree: etree._Element | etree._ElementTree[etree._Element] | None = ...,
+    url: str | None = ...,
+    path: str | os.PathLike[str] | None = ...,
+    file: TextIO | BinaryIO | None = ...,
+    handlers: Iterable[urlhandlers.UrlHandler] | None = ...,
+    postprocessors: Iterable[postprocess.PostProcessor] | None = ...,
+    create_validator: Literal[False],
+    base_uri: str | None = ...,
+    default_base_uri: str | None = ...,
+    inliner: type[Inliner] | None = ...,
+) -> etree._Element:
+    ...
+
+
+@overload
+def inline(
+    src: AnyInlineSrc = ...,
+    *,
+    etree: etree._Element | etree._ElementTree[etree._Element] | None = ...,
+    url: str | None = ...,
+    path: str | os.PathLike[str] | None = ...,
+    file: TextIO | BinaryIO | None = ...,
+    handlers: Iterable[urlhandlers.UrlHandler] | None = ...,
+    postprocessors: Iterable[postprocess.PostProcessor] | None = ...,
+    create_validator: Literal[True] = ...,
+    base_uri: str | None = ...,
+    default_base_uri: str | None = ...,
+    inliner: type[Inliner] | None = ...,
+) -> etree.RelaxNG:
+    ...
+
+
+def inline(
+    src: AnyInlineSrc = None,
+    *,
+    etree: etree._Element | etree._ElementTree[etree._Element] | None = None,
+    url: str | None = None,
+    path: str | os.PathLike[str] | None = None,
+    file: TextIO | BinaryIO | None = None,
+    handlers: Iterable[urlhandlers.UrlHandler] | None = None,
+    postprocessors: Iterable[postprocess.PostProcessor] | None = None,
+    # mypy treats Literal[True, False] differently to bool 😳
+    create_validator: Literal[True, False] = True,
+    base_uri: str | None = None,
+    default_base_uri: str | None = None,
+    inliner: CreateInlinerFn | None = None,
+) -> etree.RelaxNG | etree._Element:
     """
     Load an XML document containing a RELAX NG schema, recursively loading and
     inlining any ``<include href="...">``/``<externalRef href="...">``
@@ -116,49 +177,72 @@ def inline(
             loaded.
     """
 
-    inliner_cls = Inliner if inliner is None else inliner
+    inliner_cls: CreateInlinerFn = Inliner if inliner is None else inliner
 
-    inliner_obj = inliner_cls(
+    inliner_obj: InlinerLike = inliner_cls(
         handlers=handlers,
         postprocessors=postprocessors,
         default_base_uri=default_base_uri,
     )
-    return inliner_obj.inline(
-        src=src,
-        etree=etree,
-        url=url,
-        path=path,
-        file=file,
-        base_uri=base_uri,
-        create_validator=create_validator,
-    )
+
+    # mypy can't infer the return type if we pass create_validator directly... 😟
+    if create_validator:
+        return inliner_obj.inline(
+            src=src,
+            etree=etree,
+            url=url,
+            path=path,
+            file=file,
+            base_uri=base_uri,
+            create_validator=True,
+        )
+    else:
+        return inliner_obj.inline(
+            src=src,
+            etree=etree,
+            url=url,
+            path=path,
+            file=file,
+            base_uri=base_uri,
+            create_validator=False,
+        )
 
 
-class InlineContext(object):
+class InlineContextToken:
+    """An opaque marker object used to distinguish InlineContext's contexts."""
+
+    pass
+
+
+@dataclass
+class InlineContext:
     """
     Maintains state through an inlining operation to prevent infinite loops,
     and allow each unique URL to be dereferenced only once.
     """
 
-    def __init__(self, dereferenced_urls=None, stack=None):
-        self.dereferenced_urls = {} if dereferenced_urls is None else dereferenced_urls
-        self.url_context_stack = [] if stack is None else stack
+    dereferenced_urls: dict[str, bytes] = field(default_factory=dict)
+    url_context_stack: list[
+        tuple[str | None, InlineContextToken, etree._Element | None]
+    ] = field(default_factory=list)
 
-    def has_been_dereferenced(self, url):
+    def has_been_dereferenced(self, url: str) -> bool:
         return url in self.dereferenced_urls
 
-    def get_previous_dereference(self, url):
+    def get_previous_dereference(self, url: str) -> bytes:
         return self.dereferenced_urls[url]
 
-    def store_dereference_result(self, url, content):
+    def store_dereference_result(self, url: str, content: bytes) -> None:
         assert url not in self.dereferenced_urls
-        assert isinstance(content, six.binary_type)
+        assert isinstance(content, bytes)
         self.dereferenced_urls[url] = content
 
-    def url_in_context(self, url):
+    def url_in_context(self, url: str | None) -> bool:
         return any(u == url for (u, _, _) in self.url_context_stack)
 
-    def _push_context(self, url, trigger_el):
+    def _push_context(
+        self, url: str | None, trigger_el: etree._Element | None
+    ) -> InlineContextToken:
         if trigger_el is None and len(self.url_context_stack) != 0:
             raise ValueError("Only the first url can omit a trigger element")
         if self.url_in_context(url):
@@ -166,11 +250,11 @@ class InlineContext(object):
                 url, trigger_el, self.url_context_stack
             )
 
-        token = object()
+        token = InlineContextToken()
         self.url_context_stack.append((url, token, trigger_el))
         return token
 
-    def _pop_context(self, url, token):
+    def _pop_context(self, url: str | None, token: InlineContextToken) -> None:
         if len(self.url_context_stack) == 0:
             raise ValueError("Context stack is empty")
         head = self.url_context_stack.pop()
@@ -180,16 +264,19 @@ class InlineContext(object):
                 ". expected: {0}, actual: {1}".format((url, token), head[:2])
             )
 
-    def track(self, url, trigger_el=None):
+    def track(
+        self, url: str | None, trigger_el: etree._Element | None = None
+    ) -> ContextManager[None]:
         """
         A context manager which keeps track of inlining under the specified
         url. If an attempt is made to inline a url which is already being
         inlined, an error will be raised (as it indicates a direct or indirect
         self reference).
+
         """
 
         @contextlib.contextmanager
-        def tracker(url):
+        def tracker(url: str | None) -> Generator[None, None, None]:
             token = self._push_context(url, trigger_el)
             yield
             self._pop_context(url, token)
@@ -197,7 +284,60 @@ class InlineContext(object):
         return tracker(url)
 
 
-class Inliner(object):
+class InlinerLike(Protocol):
+    @overload
+    def inline(
+        self,
+        src: AnyInlineSrc = ...,
+        *,
+        etree: etree._Element | etree._ElementTree[etree._Element] | None = ...,
+        url: str | None = ...,
+        path: str | os.PathLike[str] | None = ...,
+        file: TextIO | BinaryIO | None = ...,
+        create_validator: Literal[False],
+        base_uri: str | None = ...,
+    ) -> etree._Element:
+        ...
+
+    @overload
+    def inline(
+        self,
+        src: AnyInlineSrc = ...,
+        *,
+        etree: etree._Element | etree._ElementTree[etree._Element] | None = ...,
+        url: str | None = ...,
+        path: str | os.PathLike[str] | None = ...,
+        file: TextIO | BinaryIO | None = ...,
+        create_validator: Literal[True] = ...,
+        base_uri: str | None = ...,
+    ) -> etree.RelaxNG:
+        ...
+
+    @property
+    def handlers(self) -> Sequence[urlhandlers.UrlHandler]:
+        ...
+
+    @property
+    def postprocessors(self) -> Sequence[postprocess.PostProcessor]:
+        ...
+
+    @property
+    def default_base_uri(self) -> str:
+        ...
+
+
+class CreateInlinerFn(Protocol):
+    def __call__(
+        self,
+        *,
+        handlers: Iterable[urlhandlers.UrlHandler] | None = None,
+        postprocessors: Iterable[postprocess.PostProcessor] | None = None,
+        default_base_uri: str | None = None,
+    ) -> InlinerLike:
+        ...
+
+
+class Inliner:
     """
     Inliners merge references to external schemas into an input schema via
     their ``inline()`` method.
@@ -207,7 +347,17 @@ class Inliner(object):
     calling its ``inline()`` method.
     """
 
-    def __init__(self, handlers=None, postprocessors=None, default_base_uri=None):
+    handlers: Final[Sequence[urlhandlers.UrlHandler]]
+    postprocessors: Final[Sequence[postprocess.PostProcessor]]
+    default_base_uri: Final[str]
+
+    def __init__(
+        self,
+        *,
+        handlers: Iterable[urlhandlers.UrlHandler] | None = None,
+        postprocessors: Iterable[postprocess.PostProcessor] | None = None,
+        default_base_uri: str | None = None,
+    ):
         """
         Create an Inliner with the specified Handlers, PostProcessors and
         default base URI.
@@ -236,16 +386,16 @@ class Inliner(object):
         )
 
         if default_base_uri is None:
-            self.default_base_uri = self.get_default_default_base_uri()
+            default_base_uri = self.get_default_default_base_uri()
         else:
             if not uri.is_uri(default_base_uri):
                 raise ValueError(
                     "default_base_uri is not a valid URI: {0}".format(default_base_uri)
                 )
-            self.default_base_uri = default_base_uri
+        self.default_base_uri = default_base_uri
 
     # Yes, this is the default's default.
-    def get_default_default_base_uri(self):
+    def get_default_default_base_uri(self) -> str:
         """
         Get the URI to use as the default_base_uri if none is provided.
         """
@@ -253,25 +403,25 @@ class Inliner(object):
         assert dir.endswith("/")
         return urlhandlers.file.makeurl(dir, abs=True)
 
-    def get_default_postprocessors(self):
+    def get_default_postprocessors(self) -> Sequence[postprocess.PostProcessor]:
         return postprocess.get_default_postprocessors()
 
-    def get_default_handlers(self):
+    def get_default_handlers(self) -> Sequence[urlhandlers.UrlHandler]:
         return urlhandlers.get_default_handlers()
 
-    def postprocess(self, grammar):
+    def postprocess(self, grammar: etree._Element) -> etree._Element:
         for pp in self.postprocessors:
             grammar = pp.postprocess(grammar)
         return grammar
 
-    def get_handler(self, url):
+    def get_handler(self, url: str) -> urlhandlers.UrlHandler:
         handlers = (h for h in self.handlers if h.can_handle(url))
         try:
             return next(handlers)
         except StopIteration:
             raise NoAvailableHandlerError("No handler can handle url: {0}".format(url))
 
-    def dereference_url(self, url, context):
+    def dereference_url(self, url: str, context: InlineContext) -> etree._Element:
         if context.has_been_dereferenced(url):
             content = context.get_previous_dereference(url)
         else:
@@ -281,15 +431,16 @@ class Inliner(object):
 
         return self.parse_grammar_xml(content, url)
 
-    def parse_grammar_xml(self, xml_string, base_url):
+    def parse_grammar_xml(
+        self, xml_string: str | bytes, base_url: str | None
+    ) -> etree._Element:
         try:
             xml = etree.fromstring(xml_string, base_url=base_url)
         except etree.ParseError as cause:
-            err = ParseError(
+            raise ParseError(
                 "Unable to parse result of dereferencing "
-                "url: {0}. error: {1}".format(base_url, cause)
-            )
-            six.raise_from(err, cause)
+                f"url: {base_url}. error: {cause}"
+            ) from cause
 
         assert xml.getroottree().docinfo.URL == base_url
 
@@ -299,10 +450,11 @@ class Inliner(object):
         return xml
 
     @classmethod
-    def _strip_non_rng(cls, tree):
+    def _strip_non_rng(cls, tree: etree._Element) -> etree._Element | None:
         if etree.QName(tree).namespace != RNG_NS:
-            if tree.getparent() is not None:
-                tree.getparent().remove(tree)
+            parent = tree.getparent()
+            if parent is not None:
+                parent.remove(tree)
             return None
 
         non_rng_attrs = [
@@ -313,12 +465,12 @@ class Inliner(object):
         for key in non_rng_attrs:
             del tree.attrib[key]
 
-        for child in tree.iterchildren(tag=etree.Element):
+        for child in tree.iterchildren(etree.Element):
             cls._strip_non_rng(child)
 
         return tree
 
-    def validate_grammar_xml(self, grammar):
+    def validate_grammar_xml(self, grammar: etree._Element) -> None:
         """
         Checks that grammar is an XML document matching the RELAX NG schema.
         """
@@ -340,13 +492,12 @@ class Inliner(object):
         try:
             RELAXNG_SCHEMA.assertValid(stripped)
         except etree.DocumentInvalid as cause:
-            err = InvalidGrammarError(msg.format(url, cause))
-            six.raise_from(err, cause)
+            raise InvalidGrammarError(msg.format(url, cause)) from cause
 
-    def get_source_url(self, xml):
+    def get_source_url(self, xml: etree._Element) -> str | None:
         return xml.getroottree().docinfo.URL
 
-    def create_validator(self, schema):
+    def create_validator(self, schema: etree._Element) -> etree.RelaxNG:
         # This should not fail under normal circumstances as we've validated
         # our input RELAX NG schemas. However, if the libxml2 compat is
         # disabled and a buggy libxml2 version is used then this could fail.
@@ -355,16 +506,45 @@ class Inliner(object):
         # explicitly disabled our workaround to protect them from it.
         return etree.RelaxNG(schema)
 
+    @overload
     def inline(
         self,
-        src=None,
-        etree=None,
-        url=None,
-        path=None,
-        file=None,
-        base_uri=None,
-        create_validator=True,
-    ):
+        src: AnyInlineSrc = ...,
+        *,
+        etree: etree._Element | etree._ElementTree[etree._Element] | None = ...,
+        url: str | None = ...,
+        path: str | os.PathLike[str] | None = ...,
+        file: TextIO | BinaryIO | None = ...,
+        create_validator: Literal[False],
+        base_uri: str | None = ...,
+    ) -> etree._Element:
+        ...
+
+    @overload
+    def inline(
+        self,
+        src: AnyInlineSrc = ...,
+        *,
+        etree: etree._Element | etree._ElementTree[etree._Element] | None = ...,
+        url: str | None = ...,
+        path: str | os.PathLike[str] | None = ...,
+        file: TextIO | BinaryIO | None = ...,
+        create_validator: Literal[True] = ...,
+        base_uri: str | None = ...,
+    ) -> etree.RelaxNG:
+        ...
+
+    def inline(
+        self,
+        src: AnyInlineSrc = None,
+        *,
+        etree: etree._Element | etree._ElementTree[etree._Element] | None = None,
+        url: str | None = None,
+        path: str | os.PathLike[str] | None = None,
+        file: TextIO | BinaryIO | None = None,
+        create_validator: Literal[True, False] = True,
+        base_uri: str | None = None,
+    ) -> etree.RelaxNG | etree._Element:
         """
         Load an XML document containing a RELAX NG schema, recursively loading
         and inlining any ``<include>``/``<externalRef>`` elements to form a
@@ -411,13 +591,14 @@ class Inliner(object):
             # lxml.etree ElementTree
             elif hasattr(src, "getroot"):
                 etree = src.getroot()
-            elif isinstance(src, six.string_types):
+                assert _etree.iselement(etree)
+            elif isinstance(src, str):
                 if uri.is_uri_reference(src):
                     url = src
                 else:
                     path = src
             elif hasattr(src, "read"):
-                file = src
+                file = cast("TextIO | BinaryIO", src)
             else:
                 raise ValueError("Don't know how to use src: {0!r}".format(src))
 
@@ -475,7 +656,12 @@ class Inliner(object):
             return self.create_validator(schema)
         return schema
 
-    def _inline(self, grammar, context, trigger_el=None):
+    def _inline(
+        self,
+        grammar: etree._Element,
+        context: InlineContext,
+        trigger_el: etree._Element | None = None,
+    ) -> DeferredXmlInsertion:
         dxi = DeferredXmlInsertion(grammar)
 
         # Track the URLs we're inlining from to detect cycles
@@ -486,14 +672,18 @@ class Inliner(object):
 
         return dxi
 
-    def _inline_includes(self, dxi, grammar, context):
+    def _inline_includes(
+        self, dxi: DeferredXmlInsertion, grammar: etree._Element, context: InlineContext
+    ) -> None:
         assert dxi.get_root_el() == grammar
         includes = grammar.xpath("//rng:include", namespaces=NSMAP)
 
         for include in includes:
             self._inline_include(dxi, include, context)
 
-    def _inline_include(self, dxi, include, context):
+    def _inline_include(
+        self, dxi: DeferredXmlInsertion, include: etree._Element, context: InlineContext
+    ) -> None:
         url = self._get_href_url(include)
 
         grammar_dxi = self._inline(
@@ -537,7 +727,9 @@ class Inliner(object):
         # inlining.
         dxi.register_insert(include, 0, grammar_dxi)
 
-    def _remove_overridden_components(self, include, grammar):
+    def _remove_overridden_components(
+        self, include: etree._Element, grammar: etree._Element
+    ) -> None:
         override_starts, override_defines = self._grouped_components(include)
 
         if not (override_starts or override_defines):
@@ -563,13 +755,17 @@ class Inliner(object):
                 )
             self._remove_all(overridden)
 
-    def _remove_all(self, elements):
+    def _remove_all(self, elements: Iterable[etree._Element]) -> None:
         for el in elements:
-            el.getparent().remove(el)
+            parent = el.getparent()
+            assert parent is not None, "attempted to remove the XML root"
+            parent.remove(el)
 
-    def _grouped_components(self, el):
-        starts = []
-        defines = collections.defaultdict(list)
+    def _grouped_components(
+        self, el: etree._Element
+    ) -> tuple[Sequence[etree._Element], Mapping[str, Sequence[etree._Element]]]:
+        starts: list[etree._Element] = []
+        defines: dict[str, list[etree._Element]] = collections.defaultdict(list)
 
         for c in self._raw_components(el):
             if c.tag == RNG_START_TAG:
@@ -582,7 +778,9 @@ class Inliner(object):
 
         return (starts, defines)
 
-    def _raw_components(self, el):
+    def _raw_components(
+        self, el: etree._Element
+    ) -> Generator[etree._Element, None, None]:
         """
         Yields the components of an element, as defined in the RELAX NG spec.
 
@@ -601,14 +799,18 @@ class Inliner(object):
             for component in self._raw_components(div):
                 yield component
 
-    def _inline_external_refs(self, dxi, grammar, context):
+    def _inline_external_refs(
+        self, dxi: DeferredXmlInsertion, grammar: etree._Element, context: InlineContext
+    ) -> None:
         assert dxi.get_root_el() == grammar
         refs = grammar.xpath("//rng:externalRef", namespaces=NSMAP)
 
         for ref in refs:
             self._inline_external_ref(dxi, ref, context)
 
-    def _inline_external_ref(self, dxi, ref, context):
+    def _inline_external_ref(
+        self, dxi: DeferredXmlInsertion, ref: etree._Element, context: InlineContext
+    ) -> None:
         url = self._get_href_url(ref)
 
         grammar_dxi = self._inline(
@@ -639,11 +841,11 @@ class Inliner(object):
 
         dxi.register_replace(ref, grammar_dxi)
 
-    def _get_base_uri(self, el):
+    def _get_base_uri(self, el: etree._Element) -> str:
         base = "" if el.base is None else el.base
         return uri.resolve(self.default_base_uri, base)
 
-    def _get_href_url(self, el):
+    def _get_href_url(self, el: etree._Element) -> str:
         # validate_grammar_xml() ensures we have an href attr
         assert "href" in el.attrib
 
@@ -666,7 +868,7 @@ class Inliner(object):
 
 
 # Sigh...
-class DeferredXmlInsertion(object):
+class DeferredXmlInsertion:
     """
     A ridiculous hack to merge together lxml XML trees while preserving the
     namespace prefixes used in the tree being merged in.
@@ -690,7 +892,12 @@ class DeferredXmlInsertion(object):
     parse once for any given XML element in the tree.
     """
 
-    def __init__(self, root_el):
+    root_el: etree._Element
+    root_replacement: etree._Element | DeferredXmlInsertion | None
+    pending_insertions: list[tuple[str, etree._Element | DeferredXmlInsertion]]
+    insertions_performed: bool
+
+    def __init__(self, root_el: etree._Element) -> None:
         assert etree.iselement(root_el)
         # root_el is the root el of its tree
         assert root_el.getroottree().getroot() == root_el
@@ -699,10 +906,15 @@ class DeferredXmlInsertion(object):
         self.pending_insertions = []
         self.insertions_performed = False
 
-    def get_root_el(self):
+    def get_root_el(self) -> etree._Element:
         return self.root_el
 
-    def register_insert(self, parent, index, el):
+    def register_insert(
+        self,
+        parent: etree._Element,
+        index: int,
+        el: etree._Element | DeferredXmlInsertion,
+    ) -> None:
         children = list(parent)
         if len(children) == 0:
             target = parent
@@ -712,16 +924,19 @@ class DeferredXmlInsertion(object):
             insert_after = True
         else:
             el_at_pos = children[index]
-            target = el_at_pos.getprevious()
-            insert_after = True
-
-            if target is None:
+            prev = el_at_pos.getprevious()
+            if prev is None:
                 target = parent
                 insert_after = False
+            else:
+                target = prev
+                insert_after = True
 
         self._register_insertion(target, insert_after, el)
 
-    def register_replace(self, old_el, new_el):
+    def register_replace(
+        self, old_el: etree._Element, new_el: etree._Element | DeferredXmlInsertion
+    ) -> None:
         """
         Replace old_el with new_el. This works like:
             el.parent.replace(el, replacement)
@@ -751,9 +966,16 @@ class DeferredXmlInsertion(object):
 
         # Remove old_el immediately, and register the insertion
         self._register_insertion(prev, insert_after, new_el)
-        old_el.getparent().remove(old_el)
+        old_el_parent = old_el.getparent()
+        assert old_el_parent is not None  # cannot be None since root case is above
+        old_el_parent.remove(old_el)
 
-    def _register_insertion(self, target_el, insert_after, el):
+    def _register_insertion(
+        self,
+        target_el: etree._Element,
+        insert_after: bool,
+        el: etree._Element | DeferredXmlInsertion,
+    ) -> None:
         """
         Register an element to be inserted into this object's root_el. The
         insertion is not performed immediately, but at a later time.
@@ -779,12 +1001,12 @@ class DeferredXmlInsertion(object):
         # Record the marker against the el for later bulk insertion
         self.pending_insertions.append((marker, el))
 
-    def _prevent_repeated_insertions(self):
+    def _prevent_repeated_insertions(self) -> None:
         if self.insertions_performed is not False:
             raise AssertionError("insertions have already performed")
         self.insertions_performed = True
 
-    def perform_insertions(self):
+    def perform_insertions(self) -> etree._Element:
         if len(self.pending_insertions) == 0:
             self._prevent_repeated_insertions()
             return self.root_el
@@ -796,12 +1018,12 @@ class DeferredXmlInsertion(object):
             merged_xml, base_url=self.root_el.getroottree().docinfo.URL
         )
 
-    def _get_xml_string(self, el):
+    def _get_xml_string(self, el: etree._Element | DeferredXmlInsertion) -> str:
         if isinstance(el, DeferredXmlInsertion):
             return el._perform_insertions_internal()
         return etree.tostring(el, encoding="unicode")
 
-    def _perform_insertions_internal(self):
+    def _perform_insertions_internal(self) -> str:
         self._prevent_repeated_insertions()
 
         # We never have a situation where the root is replaced, and insertions
@@ -826,26 +1048,20 @@ class DeferredXmlInsertion(object):
         return root_xml
 
 
-def _escape_match(match):
+def _escape_match(match: re.Match[bytes]) -> bytes:
     char = match.group()
     assert len(char) == 1
-    assert isinstance(char, six.binary_type)
+    assert isinstance(char, bytes)
     return "%{0:X}".format(ord(char)).encode("ascii")
 
 
-def escape_reserved_characters(url):
+def escape_reserved_characters(url: str) -> str:
     utf8 = url.encode("utf-8")
     return NEEDS_ESCAPE_RE.sub(_escape_match, utf8).decode("ascii")
 
 
-def _get_cwd():
-    # Six doesn't currently handle this difference between Py 2 and 3:
-    # getcwd() returns bytes on Py 2 but text in Py 3.
-    if six.PY2:
-        cwd_path = os.getcwdu()
-    else:
-        cwd_path = os.getcwd()
-
+def _get_cwd() -> str:
+    cwd_path = os.getcwd()
     # Directory paths used as URLs need to end with a slash, otherwise the last
     # path segment will be dropped when resolve()ing.
     cwd_path = path.join(cwd_path, "")

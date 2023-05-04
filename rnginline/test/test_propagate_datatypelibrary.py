@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import annotations
 
 import copy
 
@@ -21,7 +21,7 @@ from rnginline.postprocess import datatypelibrary
         ('<a><b><c id="start"/></b></a>', ""),
     ],
 )
-def test_lookup_datatypelibrary(xml, expected):
+def test_lookup_datatypelibrary(xml: str, expected: str) -> None:
     root = etree.XML(xml)
     (start,) = root.xpath("//*[@id='start']")
 
@@ -35,7 +35,7 @@ def test_lookup_datatypelibrary(xml, expected):
         "data/datatype-library-propagation/b.rng",
     ],
 )
-def test_propagate_datatype_library(path):
+def test_propagate_datatype_library(path: str) -> None:
     url = urlhandlers.pydata.makeurl("rnginline.test", path)
     el = etree.XML(urlhandlers.pydata.dereference(url))
 

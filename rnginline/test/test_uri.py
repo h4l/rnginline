@@ -1,12 +1,13 @@
-from __future__ import unicode_literals
+from __future__ import annotations
+
+import urllib
 
 import pytest
-from six.moves import urllib
 
 from rnginline import uri
 
 
-def test_urllib_urljoin_does_not_work_for_us():
+def test_urllib_urljoin_does_not_work_for_us() -> None:
     """The reason for the uri module to exist."""
 
     # bad
@@ -20,7 +21,7 @@ def test_urllib_urljoin_does_not_work_for_us():
     )  # What I'd expect
 
 
-def test_urllib_parsing_is_not_that_great():
+def test_urllib_parsing_is_not_that_great() -> None:
     assert urllib.parse.unquote("f%69le:///foo") == "file:///foo"
     assert urllib.parse.urlsplit("f%69le:///foo") == (
         "",
@@ -31,7 +32,7 @@ def test_urllib_parsing_is_not_that_great():
     )  # WTF...
 
 
-def test_urllib_urlunsplit_adds_empty_netloc_on_file_urls():
+def test_urllib_urlunsplit_adds_empty_netloc_on_file_urls() -> None:
     parts = ("file", "", "/foo/bar", "", "")
     assert urllib.parse.urlunsplit(parts) == "file:///foo/bar"
 
@@ -104,7 +105,7 @@ BASE = ("http://a/b/c/d;p?q",)
         ("x://blah", "y:./rel/path", "y:rel/path"),
     ],
 )
-def test_resolve(base, reference, target):
+def test_resolve(base: str, reference: str, target: str) -> None:
     assert uri.resolve(base, reference) == target
 
 
@@ -116,7 +117,7 @@ def test_resolve(base, reference, target):
         BASE + ("http:g", "http://a/b/c/g", False),  # for backward compatibility
     ],
 )
-def test_strict_resolve(base, reference, target, strict):
+def test_strict_resolve(base: str, reference: str, target: str, strict: bool) -> None:
     assert uri.resolve(base, reference, strict=strict) == target
 
 
@@ -130,7 +131,7 @@ def test_strict_resolve(base, reference, target, strict):
         ("//host/a/path", True),
     ],
 )
-def test_resolve_base_must_be_uri(base, raises):
+def test_resolve_base_must_be_uri(base: str, raises: bool) -> None:
     if raises is True:
         with pytest.raises(ValueError):
             uri.resolve(base, "")
@@ -148,7 +149,7 @@ def test_resolve_base_must_be_uri(base, raises):
         ("//host/a/path", False),
     ],
 )
-def test_resolve_reference_must_be_uri_ref(ref, raises):
+def test_resolve_reference_must_be_uri_ref(ref: str, raises: bool) -> None:
     if raises is True:
         with pytest.raises(ValueError):
             uri.resolve("x:/foo", ref)
@@ -211,7 +212,7 @@ def test_resolve_reference_must_be_uri_ref(ref, raises):
         (("a", "b", "/c", "d=d", "e"), "a://b/c?d=d#e"),
     ],
 )
-def test_recombine(parts, expected):
+def test_recombine(parts: tuple[str, str, str, str, str], expected: str | None) -> None:
     if expected is None:
         assert parts[1] and not parts[2].startswith("/")
         with pytest.raises(uri.UriSyntaxError):

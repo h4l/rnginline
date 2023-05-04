@@ -743,23 +743,6 @@ files = [
 traitlets = "*"
 
 [[package]]
-name = "mock"
-version = "4.0.3"
-description = "Rolling backport of unittest.mock for all Pythons"
-category = "dev"
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "mock-4.0.3-py3-none-any.whl", hash = "sha256:122fcb64ee37cfad5b3f48d7a7d51875d7031aaf3d8be7c42e2bee25044eee62"},
-    {file = "mock-4.0.3.tar.gz", hash = "sha256:7d3fbbde18228f4ff2f1f119a45cdffa458b4c0dee32eb4d2bb2f82554bac7bc"},
-]
-
-[package.extras]
-build = ["blurb", "twine", "wheel"]
-docs = ["sphinx"]
-test = ["pytest (<5.4)", "pytest-cov"]
-
-[[package]]
 name = "mypy"
 version = "1.2.0"
 description = "Optional static typing for Python"
@@ -1132,7 +1115,7 @@ testing-integration = ["build[virtualenv]", "filelock (>=3.4.0)", "jaraco.envs (
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
-category = "main"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
@@ -1438,18 +1421,6 @@ types-beautifulsoup4 = "*"
 dev = ["black", "isort", "lxml (>=4.9,<5.0)", "mypy (>=1.1.0,<1.2.0)", "pyright (>=1.1.288)", "pytest-mypy-plugins (>1.10.0,<2.0)"]
 
 [[package]]
-name = "types-mock"
-version = "5.0.0.6"
-description = "Typing stubs for mock"
-category = "dev"
-optional = false
-python-versions = "*"
-files = [
-    {file = "types-mock-5.0.0.6.tar.gz", hash = "sha256:3abdee238948c6678ef5b4fd740bd41d30289a2fe4d91aac4ae9f6869e6c9333"},
-    {file = "types_mock-5.0.0.6-py3-none-any.whl", hash = "sha256:6946f4b2240160a1740db7d6c8e8736705acd133afd98555897db0116d41a6fc"},
-]
-
-[[package]]
 name = "types-setuptools"
 version = "67.7.0.1"
 description = "Typing stubs for setuptools"
@@ -1459,18 +1430,6 @@ python-versions = "*"
 files = [
     {file = "types-setuptools-67.7.0.1.tar.gz", hash = "sha256:980a2651b2b019809817e1585071596b87fbafcb54433ff3b12445461db23790"},
     {file = "types_setuptools-67.7.0.1-py3-none-any.whl", hash = "sha256:471a4ecf6984ffada63ffcfa884bfcb62718bd2d1a1acf8ee5513ec99789ed5e"},
-]
-
-[[package]]
-name = "types-six"
-version = "1.16.21.8"
-description = "Typing stubs for six"
-category = "dev"
-optional = false
-python-versions = "*"
-files = [
-    {file = "types-six-1.16.21.8.tar.gz", hash = "sha256:02a892ff8f423c4c5d15de7c6f4d433e643c863bcbefabd19251b478cbb284ab"},
-    {file = "types_six-1.16.21.8-py3-none-any.whl", hash = "sha256:e118ebebb4944af96b4c022b15c0769c065af09126eb148b7797023e905e0652"},
 ]
 
 [[package]]
@@ -1556,4 +1515,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "e2417321a7e10748a62f2065ba9de818afd753871855c02a136b55574df40044"
+content-hash = "77bb6f043f9eb35718d56cee7339d83d572528ad166b93afc15243b4ea67ec41"

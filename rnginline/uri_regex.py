@@ -4,7 +4,13 @@ specified in Appendix A of rfc 3986:
 
     https://tools.ietf.org/html/rfc3986#appendix-A
 """
-from __future__ import unicode_literals
+from __future__ import annotations
+
+import re
+from functools import lru_cache
+from typing import Mapping
+
+from typing_extensions import Literal as TypingLiteral
 
 from rnginline.regexbuilder import (
     Choice,
@@ -180,8 +186,49 @@ uri = Sequence(
 
 uri_reference = Choice(uri, relative_ref)
 
+RfcName = TypingLiteral[
+    "URI",
+    "hier-part",
+    "URI-reference",
+    "absolute-URI",
+    "relative-ref",
+    "relative-part",
+    "scheme",
+    "authority",
+    "userinfo",
+    "host",
+    "port",
+    "IP-literal",
+    "IPvFuture",
+    "IPv6address",
+    "h16",
+    "ls32",
+    "IPv4address",
+    "dec-octet",
+    "reg-name",
+    "path",
+    "path-abempty",
+    "path-absolute",
+    "path-noscheme",
+    "path-rootless",
+    "path-empty",
+    "segment",
+    "segment-nz",
+    "segment-nz-nc",
+    "pchar",
+    "query",
+    "fragment",
+    "pct-encoded",
+    "unreserved",
+    "reserved",
+    "gen-delims",
+    "sub-delims",
+    "HEXDIG",
+    "ALPHA",
+    "DIGIT",
+]
 
-_rfc_names = {
+_rfc_names: Mapping[RfcName, Regex] = {
     "URI": uri,
     "hier-part": hier_part,
     "URI-reference": uri_reference,
@@ -223,23 +270,20 @@ _rfc_names = {
     "DIGIT": DIGIT,
 }
 
-_compiled_rule_cache = {}
 
-
-def get_regex(rule_name):
+@lru_cache(maxsize=len(_rfc_names))
+def get_regex(rule_name: RfcName) -> re.Pattern[str]:
     """
     Get a compiled regex which matches an entire string against the named rule
     from RFC 3986.
     """
-    if rule_name not in _compiled_rule_cache:
-        if rule_name not in _rfc_names:
-            raise ValueError("Unknown rule name: {0}".format(rule_name))
-        rule = _rfc_names[rule_name]
-        # Need to place the rule between ^ and $ anchors, as the rules can't
-        # include them by default.
-        wrapped = Sequence(Start(), rule, End())
-        _compiled_rule_cache[rule_name] = wrapped.compile()
-    return _compiled_rule_cache[rule_name]
+    if rule_name not in _rfc_names:
+        raise ValueError("Unknown rule name: {0}".format(rule_name))
+    rule = _rfc_names[rule_name]
+    # Need to place the rule between ^ and $ anchors, as the rules can't
+    # include them by default.
+    wrapped = Sequence(Start(), rule, End())
+    return wrapped.compile()
 
 
 __all__ = ["get_regex"] + (

@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from __future__ import annotations
 
 import io
 import re
+from typing import TYPE_CHECKING, Sequence
+from unittest import mock
 
-import mock
 import pkg_resources as pr  # setuptools, but only used in tests
 import pytest
 from lxml import etree
 
 import rnginline
-from rnginline import DeferredXmlInsertion, uri, urlhandlers
+from rnginline import DeferredXmlInsertion, InlineContextToken, uri, urlhandlers
 from rnginline.exceptions import (
     InvalidGrammarError,
     NoAvailableHandlerError,
@@ -22,8 +22,11 @@ TESTPKG = "rnginline.test"
 
 DATA_URI = urlhandlers.pydata.makeurl(TESTPKG, "data/")
 
+if TYPE_CHECKING:
+    TestCase = tuple[str, str, bool]
 
-def _load_testcases():
+
+def _load_testcases() -> "Sequence[TestCase]":
     root_dir = "data/testcases"
     assert pr.resource_isdir(TESTPKG, root_dir)
 
@@ -35,12 +38,12 @@ def _load_testcases():
         positive_cases = [
             "/".join([root_dir, tc_dir, f])
             for f in files
-            if re.match("^positive.*\.xml$", f)
+            if re.match(r"^positive.*\.xml$", f)
         ]
         negative_cases = [
             "/".join([root_dir, tc_dir, f])
             for f in files
-            if re.match("^negative.*\.xml$", f)
+            if re.match(r"^negative.*\.xml$", f)
         ]
 
         assert positive_cases
@@ -74,11 +77,11 @@ def _load_testcases():
         ("/foo/bar%20baz.txt", "/foo/bar%20baz.txt"),
     ],
 )
-def test_escape_reserved(href_text, encoded_url):
+def test_escape_reserved(href_text: str, encoded_url: str) -> None:
     assert rnginline.escape_reserved_characters(href_text) == encoded_url
 
 
-def test_include_cant_inline_non_grammar_elements():
+def test_include_cant_inline_non_grammar_elements() -> None:
     """
     Verify that <include>s can't pull in a RNG file that doesn't start with a
     <grammar>.
@@ -105,7 +108,7 @@ def test_include_cant_inline_non_grammar_elements():
         "data/datatype-library-inheritance/base-external.rng",
     ],
 )
-def test_inlined_files_dont_inherit_datatype(schema_path):
+def test_inlined_files_dont_inherit_datatype(schema_path: str) -> None:
     illegal_url = urlhandlers.pydata.makeurl(TESTPKG, schema_path)
 
     # Inlining will succeed
@@ -116,7 +119,7 @@ def test_inlined_files_dont_inherit_datatype(schema_path):
         etree.RelaxNG(grammar)
 
 
-def _testcase_id(tc):
+def _testcase_id(tc: "TestCase") -> str:
     prefix = "data/testcases/"
     schema, file, should_match = tc
 
@@ -135,7 +138,7 @@ ttt_ids = [_testcase_id(tc) for tc in test_testcases_testcases]
 @pytest.mark.parametrize(
     "schema_file,test_file,should_match", test_testcases_testcases, ids=ttt_ids
 )
-def test_testcases(schema_file, test_file, should_match):
+def test_testcases(schema_file: str, test_file: str, should_match: bool) -> None:
     schema = rnginline.inline(urlhandlers.pydata.makeurl(TESTPKG, schema_file))
 
     xml = etree.parse(pr.resource_stream(TESTPKG, test_file))
@@ -159,7 +162,7 @@ def test_testcases(schema_file, test_file, should_match):
             )
 
 
-def test_lxml_doesnt_honor_namespace_prefixes():
+def test_lxml_doesnt_honour_namespace_prefixes() -> None:
     a = etree.XML("""<a xmlns="foo" xmlns:f1="foo"><f1:b/></a>""")
     b = list(a)[0]
     c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
@@ -175,10 +178,10 @@ def test_lxml_doesnt_honor_namespace_prefixes():
     assert a.prefix is None
     assert b.prefix == "f1"  # This won't change as we've not reinserted it
     assert c.prefix is None  # These get nuked though
-    assert d.prefix is None
+    assert d.prefix is None  # type: ignore[unreachable]
 
 
-def test_deferred_xml_insertion__replace():
+def test_deferred_xml_insertion__replace() -> None:
     a = etree.XML("""<a xmlns="foo" xmlns:f1="foo"><f1:b/></a>""")
     b = list(a)[0]
     c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
@@ -203,7 +206,7 @@ def test_deferred_xml_insertion__replace():
     assert new_d.prefix == "f3" and new_d.tag == "{foo}d"
 
 
-def test_deferred_xml_insertion__replace_root_can_only_happen_once():
+def test_deferred_xml_insertion__replace_root_can_only_happen_once() -> None:
     a = etree.XML("""<a><b/></a>""")
     c = etree.XML("""<c><d/></c>""")
     d = list(c)[0]
@@ -217,7 +220,7 @@ def test_deferred_xml_insertion__replace_root_can_only_happen_once():
         dxi.register_replace(a, d)
 
 
-def test_deferred_xml_insertion__perform_insertions_can_only_happen_once():
+def test_deferred_xml_insertion__perform_insertions_can_only_happen_once() -> None:
     a = etree.XML("""<a><b/></a>""")
     b = list(a)[0]
     c = etree.XML("""<c><d/></c>""")
@@ -231,7 +234,7 @@ def test_deferred_xml_insertion__perform_insertions_can_only_happen_once():
         dxi.perform_insertions()  # second time
 
 
-def test_foreign_attrs_cant_be_in_default_ns():
+def test_foreign_attrs_cant_be_in_default_ns() -> None:
     xml = """\
     <grammar xmlns="http://relaxng.org/ns/structure/1.0">
         <start {0}>
@@ -247,14 +250,14 @@ def test_foreign_attrs_cant_be_in_default_ns():
         rnginline.inline(etree=etree.XML(xml.format('illegal-attr="abc"')))
 
 
-def test_include_loops_trigger_error():
+def test_include_loops_trigger_error() -> None:
     with pytest.raises(SchemaIncludesSelfError):
         rnginline.inline(
             url=urlhandlers.pydata.makeurl(TESTPKG, "data/loops/start.rng")
         )
 
 
-def test_include_cant_override_start_if_no_start_in_included_file():
+def test_include_cant_override_start_if_no_start_in_included_file() -> None:
     with pytest.raises(InvalidGrammarError):
         rnginline.inline(
             url=urlhandlers.pydata.makeurl(
@@ -263,7 +266,7 @@ def test_include_cant_override_start_if_no_start_in_included_file():
         )
 
 
-def test_include_cant_override_define_if_no_matching_define_in_included_file():
+def test_include_cant_override_define_if_no_matching_define_in_included_file() -> None:
     with pytest.raises(InvalidGrammarError):
         rnginline.inline(
             url=urlhandlers.pydata.makeurl(
@@ -289,7 +292,7 @@ def test_include_cant_override_define_if_no_matching_define_in_included_file():
         ("""<a xmlns="foo" xmlns:f1="foo"><b/><b/><b/></a>""", 5, 3),
     ],
 )
-def test_deferred_xml_insertion__insert(xml, index, expected):
+def test_deferred_xml_insertion__insert(xml: str, index: int, expected: int) -> None:
     a = etree.XML(xml)
     c = etree.XML("""<f2:c xmlns:f2="foo" xmlns:f3="foo"><f3:d/></f2:c>""")
     d = list(c)[0]
@@ -302,6 +305,7 @@ def test_deferred_xml_insertion__insert(xml, index, expected):
     dxi.register_insert(a, index, c)
     new_a = dxi.perform_insertions()
     new_c = new_a.find("{foo}c")
+    assert new_c is not None
     new_d = list(new_c)[0]
 
     assert new_a.prefix is None
@@ -311,10 +315,12 @@ def test_deferred_xml_insertion__insert(xml, index, expected):
     assert new_a.index(new_c) == expected
 
 
-def test_multiple_references_to_same_uri_results_in_1_fetch():
+def test_multiple_references_to_same_uri_results_in_1_fetch() -> None:
     handler = urlhandlers.PackageDataUrlHandler()
     # Mock the dereference method to allow calls to be observed
-    handler.dereference = mock.Mock(side_effect=handler.dereference)
+    handler.dereference = mock.Mock(  # type: ignore[method-assign]
+        side_effect=handler.dereference
+    )
 
     url = urlhandlers.pydata.makeurl(TESTPKG, "data/multiple-ref-1-fetch/schema.rng")
 
@@ -324,7 +330,7 @@ def test_multiple_references_to_same_uri_results_in_1_fetch():
     assert len(handler.dereference.mock_calls) == 3
 
 
-def test_inline_url_arguments_are_resolved_against_default_base_uri():
+def test_inline_url_arguments_are_resolved_against_default_base_uri() -> None:
     class Stop(Exception):
         pass
 
@@ -348,7 +354,7 @@ def test_inline_url_arguments_are_resolved_against_default_base_uri():
     handler.dereference.assert_called_once_with(expected_url)
 
 
-def test_override_default_base_uri():
+def test_override_default_base_uri() -> None:
     default_base_uri = urlhandlers.pydata.makeurl(TESTPKG, "data/testcases/xml-base/")
     schema = rnginline.inline(url="schema.rng", default_base_uri=default_base_uri)
 
@@ -358,7 +364,7 @@ def test_override_default_base_uri():
     assert schema(xml)
 
 
-def test_overridden_default_base_uri_must_be_absolute():
+def test_overridden_default_base_uri_must_be_absolute() -> None:
     """
     The default base URI must be an absolute URI. i.e. matches the URI grammar,
     not the URI-reference grammar.
@@ -371,7 +377,7 @@ def test_overridden_default_base_uri_must_be_absolute():
         rnginline.Inliner(default_base_uri=relative_uri)
 
 
-def test_provide_base_uri():
+def test_provide_base_uri() -> None:
     """
     This tests manually specifying a base URI to use for the source.
     """
@@ -393,7 +399,7 @@ def test_provide_base_uri():
     assert schema(xml)
 
 
-def test_overridden_base_uri_must_be_uri_ref():
+def test_overridden_base_uri_must_be_uri_ref() -> None:
     """
     The base URI, if specified, must match the URI-reference grammar. i.e. it
     is a relative or absolute URI.
@@ -409,12 +415,12 @@ def test_overridden_base_uri_must_be_uri_ref():
         )
 
 
-def test_unhandleable_url_raises_error():
+def test_unhandleable_url_raises_error() -> None:
     with pytest.raises(NoAvailableHandlerError):
         rnginline.inline(url="my-fancy-url-scheme:/foo")
 
 
-def test_context_pushes_must_have_parents_except_first():
+def test_context_pushes_must_have_parents_except_first() -> None:
     context = rnginline.InlineContext()
 
     with context.track("x:/some/url"):
@@ -424,24 +430,24 @@ def test_context_pushes_must_have_parents_except_first():
                 pass
 
 
-def test_including_invalid_xml_file_raises_parse_error():
+def test_including_invalid_xml_file_raises_parse_error() -> None:
     url = urlhandlers.pydata.makeurl(TESTPKG, "data/include-invalid-xml/ok.rng")
     with pytest.raises(ParseError):
         rnginline.inline(url=url)
 
 
-def test_including_non_rng_xml_file_raises_invalid_grammar_error():
+def test_including_non_rng_xml_file_raises_invalid_grammar_error() -> None:
     url = urlhandlers.pydata.makeurl(TESTPKG, "data/include-non-rng-xml/ok.rng")
     with pytest.raises(InvalidGrammarError):
         rnginline.inline(url=url)
 
 
-def test_calling_inline_with_0_args_raises_value_error():
+def test_calling_inline_with_0_args_raises_value_error() -> None:
     with pytest.raises(ValueError):
         rnginline.inline()
 
 
-def test_inline_etree_el_with_no_base_uri_uses_default_base_uri():
+def test_inline_etree_el_with_no_base_uri_uses_default_base_uri() -> None:
     base_url = urlhandlers.pydata.makeurl(TESTPKG, "data/testcases/xml-base/")
     schema_bytes = urlhandlers.pydata.dereference(uri.resolve(base_url, "schema.rng"))
 
@@ -465,7 +471,7 @@ def test_inline_etree_el_with_no_base_uri_uses_default_base_uri():
     )
 
 
-def test_inline_args_etree_as_src():
+def test_inline_args_etree_as_src() -> None:
     url = uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")
     schema_el = etree.fromstring(
         urlhandlers.pydata.dereference(
@@ -486,7 +492,7 @@ def test_inline_args_etree_as_src():
     )
 
 
-def test_inline_args_etree_doc_as_src():
+def test_inline_args_etree_doc_as_src() -> None:
     url = uri.resolve(DATA_URI, "testcases/xml-base/schema.rng")
     schema_el = etree.fromstring(
         urlhandlers.pydata.dereference(
@@ -508,7 +514,7 @@ def test_inline_args_etree_doc_as_src():
     )
 
 
-def test_inline_args_url_refs_must_be_valid():
+def test_inline_args_url_refs_must_be_valid() -> None:
     bad_url = "/tmp/File Name With Spaces"
     assert not uri.is_uri_reference(bad_url)
 
@@ -516,7 +522,7 @@ def test_inline_args_url_refs_must_be_valid():
         rnginline.inline(url=bad_url)
 
 
-def test_inline_args_fs_path_as_src():
+def test_inline_args_fs_path_as_src() -> None:
     grammar_xml = b"""
     <element name="start" xmlns="http://relaxng.org/ns/structure/1.0">
         <empty/>
@@ -524,7 +530,9 @@ def test_inline_args_fs_path_as_src():
     """
     path = "/some/dir/Filename with spaces.rng"
     handler = urlhandlers.FilesystemUrlHandler()
-    handler.dereference = mock.Mock(side_effect=[grammar_xml])
+    handler.dereference = mock.Mock(  # type: ignore[method-assign]
+        side_effect=[grammar_xml]
+    )
 
     rnginline.inline(path, handlers=[handler])
 
@@ -533,20 +541,20 @@ def test_inline_args_fs_path_as_src():
     )
 
 
-def test_inline_args_passing_garbage():
+def test_inline_args_passing_garbage() -> None:
     with pytest.raises(ValueError):
         # pass a useless arg as src
-        rnginline.inline(1234)
+        rnginline.inline(1234)  # type: ignore[call-overload]
 
 
-def test_context_pop_with_no_context_raises_error():
+def test_context_pop_with_no_context_raises_error() -> None:
     context = rnginline.InlineContext()
 
     with pytest.raises(ValueError):
-        context._pop_context("x:/url", None)
+        context._pop_context("x:/url", None)  # type: ignore[arg-type]
 
 
-def test_context_pop_with_mismatching_url_raises_error():
+def test_context_pop_with_mismatching_url_raises_error() -> None:
     context = rnginline.InlineContext()
     token = context._push_context("x:/foo", None)
 
@@ -555,11 +563,11 @@ def test_context_pop_with_mismatching_url_raises_error():
         context._pop_context("x:/bar", token)
 
 
-def test_context_pop_with_mismatching_token_raises_error():
+def test_context_pop_with_mismatching_token_raises_error() -> None:
     context = rnginline.InlineContext()
     url = "x:/foo"
     context._push_context(url, None)  # Ignore the returned token
 
     with pytest.raises(ValueError):
         # different token to push call
-        context._pop_context(url, object())
+        context._pop_context(url, InlineContextToken())

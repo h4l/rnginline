@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import annotations
 
 import pytest
 
@@ -15,7 +15,7 @@ from rnginline.test.test_regexbuilder import _TestString as ts
             ur.ALPHA,
             ~ts("9"),
             ~ts("0"),
-            *list("abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+            *list("abcdefghijklmnopqrstuvwxyz" "ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
         ),
         tc(ur.HEXDIG, ~ts("g"), ~ts("z"), *list("abcdefABCDEF0123456789")),
         tc(ur.sub_delims, ~ts("g"), ~ts("z"), *list("!$&'()*+,;=")),
@@ -29,21 +29,21 @@ from rnginline.test.test_regexbuilder import _TestString as ts
             ~ts("#"),
             ~ts("/"),
             "%12",
-            *list("abc:@foo-._~!$&'()*+,;=")
+            *list("abc:@foo-._~!$&'()*+,;="),
         ),
         tc(
             ur.query,
             "",
             "???",
             "?abcDef-._~123/?:@!$&'()*+,;=%27",
-            *[~ts(x) for x in "#[]"]
+            *[~ts(x) for x in "#[]"],
         ),
         tc(
             ur.fragment,
             "",
             "???",
             "?abcDef-._~123/?:@!$&'()*+,;=%27",
-            *[~ts(x) for x in "#[]"]
+            *[~ts(x) for x in "#[]"],
         ),
         tc(
             ur.segment_nz_nc,
@@ -241,7 +241,7 @@ from rnginline.test.test_regexbuilder import _TestString as ts
             "[v1.1]",
             "",
             "example.com",
-            *[~ts(x) for x in ":/?#[]@"]
+            *[~ts(x) for x in ":/?#[]@"],
         ),
         tc(ur.userinfo, "", "-._~!$&'()*+,;=:abc123ABC", *[~ts(x) for x in "/?#[]@"]),
         tc(
@@ -319,10 +319,10 @@ from rnginline.test.test_regexbuilder import _TestString as ts
         ),
     ],
 )
-def test_uri_regex(test_case):
+def test_uri_regex(test_case: tc) -> None:
     test_case.run()
 
 
-def test_get_regex_raises_on_unknown_name():
+def test_get_regex_raises_on_unknown_name() -> None:
     with pytest.raises(ValueError):
         ur.get_regex("fjalksdjflas")

@@ -1,9 +1,11 @@
-from __future__ import unicode_literals
+from __future__ import annotations
 
-from copy import copy
+import re
+from dataclasses import dataclass, replace
+from typing import Mapping
+from typing import Sequence as TypingSequence
 
 import pytest
-import six
 
 from rnginline.regexbuilder import (
     Capture,
@@ -12,6 +14,7 @@ from rnginline.regexbuilder import (
     Literal,
     OneOrMore,
     Optional,
+    Regex,
     Repeat,
     Sequence,
     Set,
@@ -22,22 +25,18 @@ from rnginline.regexbuilder import (
 )
 
 
-class _TestString(object):
-    def __init__(
-        self, string, groups=None, groupdict=None, length=None, should_match=True
-    ):
-        self.string = string
-        self.groups = groups
-        self.groupdict = groupdict
-        self.length = length
-        self.should_match = should_match
+@dataclass(frozen=True)
+class _TestString:
+    string: str
+    groups: TypingSequence[str | None] | None = None
+    groupdict: Mapping[str, str] | None = None
+    length: int | None = None
+    should_match: bool = True
 
-    def __invert__(self):
-        inverted = copy(self)
-        inverted.should_match = not self.should_match
-        return inverted
+    def __invert__(self) -> _TestString:
+        return replace(self, should_match=not self.should_match)
 
-    def run(self, regex):
+    def run(self, regex: re.Pattern[str]) -> None:
         match = regex.match(self.string)
 
         # For debugging
@@ -55,18 +54,17 @@ class _TestString(object):
         else:
             assert not match or match.end() != length, msg
 
-    def __repr__(self):
-        return "{0}({1!r}, groups={2!r}, length={3!r}, should_match={4!r})".format(
-            type(self), self.string, self.groups, self.length, self.should_match
-        )
 
+@dataclass(init=False)
+class _TestCase:
+    node: Regex
+    test_strings: TypingSequence[_TestString]
 
-class _TestCase(object):
-    def __init__(self, node, *test_strings, **kwargs):
+    def __init__(
+        self, node: Regex, *test_strings: str | _TestString, wrap: bool = True
+    ) -> None:
         if len(test_strings) == 0:
             raise ValueError("no test strings provided")
-
-        wrap = kwargs.get("wrap", True)
 
         if wrap is True:
             # We generally want to match with ^<pattern>$, otherwise patterns
@@ -76,21 +74,14 @@ class _TestCase(object):
         else:
             self.node = node
         self.test_strings = [
-            _TestString(ts) if isinstance(ts, six.text_type) else ts
-            for ts in test_strings
+            _TestString(ts) if isinstance(ts, str) else ts for ts in test_strings
         ]
 
-    def run(self):
+    def run(self) -> None:
         regex = self.node.compile()
 
         for test_string in self.test_strings:
             test_string.run(regex)
-
-    def __repr__(self):
-        test_strings = ""
-        if self.test_strings:
-            test_strings = ", " + ", ".join(repr(ts) for ts in self.test_strings)
-        return "{0}({1!r}{2})".format(type(self).__name__, self.node, test_strings)
 
 
 tc = _TestCase
@@ -102,8 +93,8 @@ ts = _TestString
     [
         tc(Literal("foo"), ts("foo"), ~ts("afoo")),
         tc(
-            Literal("".join(six.unichr(x) for x in range(256))),
-            "".join(six.unichr(x) for x in range(256)),
+            Literal("".join(chr(x) for x in range(256))),
+            "".join(chr(x) for x in range(256)),
         ),
         tc(Literal.from_codepoint(0x10155), ts("\U00010155")),
         tc(Literal.from_codepoint(ord("x")), ts("x")),
@@ -157,7 +148,7 @@ ts = _TestString
         tc(
             Repeat(Literal("ab"), min=None, max=10),
             ~ts("ab" * 11),
-            *["ab" * n for n in range(1, 11)]
+            *["ab" * n for n in range(1, 11)],
         ),
         tc(
             Sequence(Literal("foo"), Optional(Literal("bar")), Literal("baz")),
@@ -182,33 +173,33 @@ ts = _TestString
         tc(ZeroOrMore(Whitespace()), "", "  ", "\t\t  \t"),
     ],
 )
-def test_regex_builder_node(test_case):
+def test_regex_builder_node(test_case: _TestCase) -> None:
     test_case.run()
 
 
-def test_capture_name_must_by_python_name():
+def test_capture_name_must_by_python_name() -> None:
     with pytest.raises(ValueError):
         Capture(Literal("lol"), name="foo-bar")  # hyphen not allowed in names
 
 
-def test_capture_rejects_unknown_kwargs():
-    with pytest.raises(ValueError):
-        Capture(Literal("lol"), foo="bar")  # unrecognised keyword arg
+def test_capture_rejects_unknown_kwargs() -> None:
+    with pytest.raises(TypeError, match="got an unexpected keyword argument"):
+        Capture(Literal("lol"), foo="bar")  # type: ignore[call-arg]
 
 
-def test_set_cannot_be_empty():
+def test_set_cannot_be_empty() -> None:
     with pytest.raises(ValueError):
         Set()
 
 
-def test_set_range_cannot_be_reversed():
+def test_set_range_cannot_be_reversed() -> None:
     with pytest.raises(ValueError):
         SetRange(20, 10)
 
 
-def test_set_range_create_rejects_unknown_args():
+def test_set_range_create_rejects_unknown_args() -> None:
     with pytest.raises(ValueError):
-        SetRange.create([1, 2, 3])
+        SetRange.create([1, 2, 3])  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -224,11 +215,11 @@ def test_set_range_create_rejects_unknown_args():
         (SetRange(50, 100), SetRange(70, 80), True),
     ],
 )
-def test_set_range_intersects(a, b, intersects):
+def test_set_range_intersects(a: SetRange, b: SetRange, intersects: bool) -> None:
     assert a.intersects(b) == intersects
 
 
-def test_repr():
+def test_repr() -> None:
     expr = Choice(Literal("foo"), Repeat(Literal("bar"), min=3, max=8))
     assert "Choice" in repr(expr)
     assert "foo|(?:bar){3,8}" in repr(expr)
