@@ -11,5 +11,6 @@ htmlcov/
 !/.editorconfig
 !/.envrc
 !/.git
+!/.gitattributes
 !/.gitignore
 !/.prettierrc

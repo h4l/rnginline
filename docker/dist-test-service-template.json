@@ -1,0 +1,12 @@
+{
+    "image": "__placeholder__",
+    "profiles": [
+        "test",
+        "distribution_test"
+    ],
+    "working_dir": "/workspaces/rnginline",
+    "command": "docker/smoke-test-distribution.sh ${RNGINLINE_DISTRIBUTION_FILES}",
+    "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs"
+    }
+}

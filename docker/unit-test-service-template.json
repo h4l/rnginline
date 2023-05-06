@@ -1,0 +1,25 @@
+{
+    "build": {
+        "context": ".",
+        "args": {
+            "python_version": "__placeholder__",
+            "python_user_uid": "${RNGINLINE_DOCKER_USER_UID:?}"
+        }
+    },
+    "profiles": [
+        "test",
+        "unit_test"
+    ],
+    "working_dir": "/workspaces/rnginline",
+    "command": [
+        "bash",
+        "-x",
+        "-c",
+        "poetry install --only main --only test\npoetry run pytest"
+    ],
+    "user": "python",
+    "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs",
+        "POETRY_VIRTUALENVS_PATH": "/workspaces/rnginline/.docker-poetry-venvs"
+    }
+}

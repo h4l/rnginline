@@ -1,0 +1,190 @@
+{
+  "version": "3.9",
+  "services": {
+    "test_py3.7": {
+      "build": {
+        "context": ".",
+        "args": {
+          "python_version": "3.7",
+          "python_user_uid": "${RNGINLINE_DOCKER_USER_UID:?}"
+        }
+      },
+      "profiles": [
+        "test",
+        "unit_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": [
+        "bash",
+        "-x",
+        "-c",
+        "poetry install --only main --only test\npoetry run pytest"
+      ],
+      "user": "python",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs",
+        "POETRY_VIRTUALENVS_PATH": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "test_py3.8": {
+      "build": {
+        "context": ".",
+        "args": {
+          "python_version": "3.8",
+          "python_user_uid": "${RNGINLINE_DOCKER_USER_UID:?}"
+        }
+      },
+      "profiles": [
+        "test",
+        "unit_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": [
+        "bash",
+        "-x",
+        "-c",
+        "poetry install --only main --only test\npoetry run pytest"
+      ],
+      "user": "python",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs",
+        "POETRY_VIRTUALENVS_PATH": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "test_py3.9": {
+      "build": {
+        "context": ".",
+        "args": {
+          "python_version": "3.9",
+          "python_user_uid": "${RNGINLINE_DOCKER_USER_UID:?}"
+        }
+      },
+      "profiles": [
+        "test",
+        "unit_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": [
+        "bash",
+        "-x",
+        "-c",
+        "poetry install --only main --only test\npoetry run pytest"
+      ],
+      "user": "python",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs",
+        "POETRY_VIRTUALENVS_PATH": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "test_py3.10": {
+      "build": {
+        "context": ".",
+        "args": {
+          "python_version": "3.10",
+          "python_user_uid": "${RNGINLINE_DOCKER_USER_UID:?}"
+        }
+      },
+      "profiles": [
+        "test",
+        "unit_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": [
+        "bash",
+        "-x",
+        "-c",
+        "poetry install --only main --only test\npoetry run pytest"
+      ],
+      "user": "python",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs",
+        "POETRY_VIRTUALENVS_PATH": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "test_py3.11": {
+      "build": {
+        "context": ".",
+        "args": {
+          "python_version": "3.11",
+          "python_user_uid": "${RNGINLINE_DOCKER_USER_UID:?}"
+        }
+      },
+      "profiles": [
+        "test",
+        "unit_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": [
+        "bash",
+        "-x",
+        "-c",
+        "poetry install --only main --only test\npoetry run pytest"
+      ],
+      "user": "python",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs",
+        "POETRY_VIRTUALENVS_PATH": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "distribution_test_py3.7": {
+      "image": "python:3.7",
+      "profiles": [
+        "test",
+        "distribution_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": "docker/smoke-test-distribution.sh ${RNGINLINE_DISTRIBUTION_FILES}",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "distribution_test_py3.8": {
+      "image": "python:3.8",
+      "profiles": [
+        "test",
+        "distribution_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": "docker/smoke-test-distribution.sh ${RNGINLINE_DISTRIBUTION_FILES}",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "distribution_test_py3.9": {
+      "image": "python:3.9",
+      "profiles": [
+        "test",
+        "distribution_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": "docker/smoke-test-distribution.sh ${RNGINLINE_DISTRIBUTION_FILES}",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "distribution_test_py3.10": {
+      "image": "python:3.10",
+      "profiles": [
+        "test",
+        "distribution_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": "docker/smoke-test-distribution.sh ${RNGINLINE_DISTRIBUTION_FILES}",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    },
+    "distribution_test_py3.11": {
+      "image": "python:3.11",
+      "profiles": [
+        "test",
+        "distribution_test"
+      ],
+      "working_dir": "/workspaces/rnginline",
+      "command": "docker/smoke-test-distribution.sh ${RNGINLINE_DISTRIBUTION_FILES}",
+      "environment": {
+        "HOME": "/workspaces/rnginline/.docker-poetry-venvs"
+      }
+    }
+  }
+}

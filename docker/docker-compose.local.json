@@ -1,0 +1,55 @@
+{
+  "version": "3.9",
+  "services": {
+    "test_py3.7": {
+      "volumes": [
+        "..:/workspaces/rnginline:rw"
+      ]
+    },
+    "distribution_test_py3.7": {
+      "volumes": [
+        "..:/workspaces/rnginline:ro"
+      ]
+    },
+    "test_py3.8": {
+      "volumes": [
+        "..:/workspaces/rnginline:rw"
+      ]
+    },
+    "distribution_test_py3.8": {
+      "volumes": [
+        "..:/workspaces/rnginline:ro"
+      ]
+    },
+    "test_py3.9": {
+      "volumes": [
+        "..:/workspaces/rnginline:rw"
+      ]
+    },
+    "distribution_test_py3.9": {
+      "volumes": [
+        "..:/workspaces/rnginline:ro"
+      ]
+    },
+    "test_py3.10": {
+      "volumes": [
+        "..:/workspaces/rnginline:rw"
+      ]
+    },
+    "distribution_test_py3.10": {
+      "volumes": [
+        "..:/workspaces/rnginline:ro"
+      ]
+    },
+    "test_py3.11": {
+      "volumes": [
+        "..:/workspaces/rnginline:rw"
+      ]
+    },
+    "distribution_test_py3.11": {
+      "volumes": [
+        "..:/workspaces/rnginline:ro"
+      ]
+    }
+  }
+}

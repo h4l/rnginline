@@ -5,7 +5,8 @@
 
   "features": {
     // We support 3.7, but some dev tools (e.g. ipython) require 3.9
-    "ghcr.io/devcontainers/features/python:1": { "version": "3.9" }
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.9" },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
   "postStartCommand": "pipx install poetry",
   "customizations": {
@@ -41,7 +42,8 @@
         "ms-python.isort",
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "timonwong.shellcheck"
       ]
     }
   }

@@ -1,0 +1,61 @@
+{
+  "version": "3.9",
+  "services": {
+    "test_py3.7": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:rw"
+      ]
+    },
+    "distribution_test_py3.7": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:ro"
+      ]
+    },
+    "test_py3.8": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:rw"
+      ]
+    },
+    "distribution_test_py3.8": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:ro"
+      ]
+    },
+    "test_py3.9": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:rw"
+      ]
+    },
+    "distribution_test_py3.9": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:ro"
+      ]
+    },
+    "test_py3.10": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:rw"
+      ]
+    },
+    "distribution_test_py3.10": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:ro"
+      ]
+    },
+    "test_py3.11": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:rw"
+      ]
+    },
+    "distribution_test_py3.11": {
+      "volumes": [
+        "devcontainer_volume:/workspaces:ro"
+      ]
+    }
+  },
+  "volumes": {
+    "devcontainer_volume": {
+      "name": "${RNGINLINE_DEVCONTAINER_VOLUME:?}",
+      "external": true
+    }
+  }
+}
