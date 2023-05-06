@@ -245,3 +245,18 @@ def test_cmdline_no_libxml2_compat_disables_compat(
     output = etree.tostring(etree.XML(stdout.read()), method="c14n")
 
     assert (input == output) == should_match_input
+
+
+def test_cmdline_prints_usage_error_when_cli_arguments_are_wrong(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        rng_main(argv=["--frob"])
+
+    assert excinfo.value.code == 1
+    _, err = capsys.readouterr()
+    assert re.search(
+        "rnginline couldn't understand the command line options it received", err
+    )
+    assert re.search("^usage: rnginline", err, re.MULTILINE)
+    assert re.search("rnginline --help", err)

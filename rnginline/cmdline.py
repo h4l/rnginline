@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import locale
 import sys
 from typing import BinaryIO, Sequence, Union, cast
 
@@ -14,16 +13,17 @@ from rnginline.postprocess import PostProcessor
 # - Assign doc to DOC to keep it if python -OO is used (which strips docstrings)
 # - We format spaces into blank lines to work around a bug in docopt-ng's usage
 #   parser.
-# TODO: maybe replace docopt-ng with another CLI parser. Aside from the parser
-# problem, it produces confusing/nonsensical error messages when a user uses
-# incorrect CLI options. I'm not happy about with this program producing such
-# messages.
+USAGE = """\
+usage: rnginline [options] <rng-src> [<rng-output>]
+       rnginline [options] --stdin [<rng-output>]
+       rnginline --help\
+"""
+
 __doc__ = DOC = f"""
 Flatten a hierachy of RELAX NG schemas into a single schema by recursively
 inlining <include>/<externalRef> elements.
 
-usage: rnginline [options] <rng-src> [<rng-output>]
-       rnginline [options] --stdin [<rng-output>]
+{USAGE}
 
 options:
     <rng-src>
@@ -142,7 +142,28 @@ def _main(args: ParsedArgs) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    args = cast(ParsedArgs, docopt.docopt(DOC, version=__version__, argv=argv))
+    try:
+        args = cast(ParsedArgs, docopt.docopt(DOC, version=__version__, argv=argv))
+    except docopt.DocoptExit as e:
+        if e.code:
+            # docopt-ng produces confusing/nonsensical error messages when a
+            # user provides incorrect CLI options. For example:
+            # > Warning: found unmatched (duplicate?) arguments
+            # > [Option(None, '--hesdfds', 0, True)]
+            # To prevent this we catch docopt-ng's DocoptExit and print our own
+            # error message.
+            print(
+                f"""\
+rnginline couldn't understand the command line options it received. Run again \
+with --help for more info.
+
+{USAGE}
+""",
+                file=sys.stderr,
+                end="",
+            )
+            raise SystemExit(1) from e
+        raise e
     try:
         _main(args)
     except RelaxngInlineError as e:
