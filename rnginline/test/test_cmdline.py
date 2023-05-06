@@ -9,7 +9,7 @@ from os import path
 from typing import Generator
 from unittest.mock import Mock
 
-import pkg_resources
+import importlib_resources
 import pytest
 from lxml import etree
 
@@ -17,7 +17,11 @@ from rnginline import _get_cwd, urlhandlers
 from rnginline.cmdline import main as rng_main
 from rnginline.exceptions import RelaxngInlineError
 from rnginline.test.mini_validator import main as minival_main
-from rnginline.test.test_rnginline import test_testcases_testcases, ttt_ids
+from rnginline.test.test_rnginline import (
+    SchemaTestCase,
+    test_testcases_testcases,
+    ttt_ids,
+)
 
 
 def _code(sysexit: SystemExit | int) -> str | int | None:
@@ -53,7 +57,7 @@ def testcase_dir() -> str:
     """
     Extract testcase data to the filesystem for access by command line tools.
     """
-    return pkg_resources.resource_filename("rnginline.test", "data/testcases")
+    return str(importlib_resources.files("rnginline.test") / "data/testcases")
 
 
 def _external_path(testcase_dir: str, pkg_path: str) -> str:
@@ -62,47 +66,44 @@ def _external_path(testcase_dir: str, pkg_path: str) -> str:
     return path.join(testcase_dir, tc_path)
 
 
-@pytest.mark.parametrize(
-    "schema_file,test_file,should_match", test_testcases_testcases, ids=ttt_ids
-)
-def test_cmdline(
-    testcase_dir: str, schema_file: str, test_file: str, should_match: bool
-) -> None:
-    schema_external = _external_path(testcase_dir, schema_file)
-    xml_external = _external_path(testcase_dir, test_file)
-
+@pytest.mark.parametrize("example", test_testcases_testcases, ids=ttt_ids)
+def test_cmdline(example: SchemaTestCase) -> None:
     # Get a temp file to write the inlined schema to
     fd, inlined_schema = tempfile.mkstemp()
     os.fdopen(fd).close()
 
-    # Generate the inlined schema with the command line tool
-    try:
-        rng_main(argv=[schema_external, inlined_schema])
-    except SystemExit as e:
-        if e.code not in [None, 0]:
-            pytest.fail("rnginline.cmdline exited with status: {0}".format(e.code))
+    with importlib_resources.as_file(example.schema_file) as schema_file:
+        # Generate the inlined schema with the command line tool
+        try:
+            rng_main(argv=[str(schema_file), inlined_schema])
+        except SystemExit as e:
+            if e.code not in [None, 0]:
+                pytest.fail(f"rnginline.cmdline exited with status: {e.code}")
 
-    try:
-        minival_main(argv=[inlined_schema, xml_external])
-        status: str | int | None = 0
-    except SystemExit as e:
-        status = 0 if e.code is None else e.code
+    with importlib_resources.as_file(example.xml_file) as xml_file:
+        try:
+            minival_main(argv=[inlined_schema, str(xml_file)])
+            status: str | int | None = 0
+        except SystemExit as e:
+            status = 0 if e.code is None else e.code
 
     # Cleanup the schema we generated
     os.unlink(inlined_schema)
 
     if status not in [0, 2]:
-        pytest.fail("mini_validator exited abnormally: {0}".format(status))
+        pytest.fail(f"mini_validator exited abnormally: {status}")
 
-    if should_match:
+    if example.should_match:
         if status != 0:
             pytest.fail(
-                "{0} should match {1} but didn't".format(test_file, schema_file)
+                f"{example.xml_file.name} should match "
+                f"{example.schema_file.name} but didn't"
             )
     else:
         if status != 2:
             pytest.fail(
-                "{0} shouldn't match {1} but did".format(test_file, schema_file)
+                f"{example.xml_file.name} shouldn't match "
+                f"{example.schema_file.name} but did"
             )
 
 

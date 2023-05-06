@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import io
 import re
-from typing import TYPE_CHECKING, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Sequence
 from unittest import mock
+from urllib.parse import urlsplit
 
-import pkg_resources as pr  # setuptools, but only used in tests
+import importlib_resources
 import pytest
+from importlib_resources.abc import Traversable
 from lxml import etree
 
 import rnginline
@@ -22,44 +26,58 @@ TESTPKG = "rnginline.test"
 
 DATA_URI = urlhandlers.pydata.makeurl(TESTPKG, "data/")
 
-if TYPE_CHECKING:
-    TestCase = tuple[str, str, bool]
+
+@dataclass(frozen=True)
+class SchemaTestCase:
+    base_url: str
+    schema_file: Traversable
+    xml_file: Traversable
+    should_match: bool
+
+    @property
+    def name(self) -> str:
+        return Path(urlsplit(self.base_url).path).name
+
+    @property
+    def schema_url(self) -> str:
+        return uri.resolve(self.base_url, self.schema_file.name)
 
 
-def _load_testcases() -> "Sequence[TestCase]":
-    root_dir = "data/testcases"
-    assert pr.resource_isdir(TESTPKG, root_dir)
+def _load_testcases() -> "Sequence[SchemaTestCase]":
+    testcases_dir = importlib_resources.files(TESTPKG) / "data/testcases"
+    testcases_url = urlhandlers.pydata.makeurl(TESTPKG, "data/testcases/")
+    assert testcases_dir.is_dir()
 
-    testcases = []
-    for tc_dir in pr.resource_listdir(TESTPKG, root_dir):
-        files = pr.resource_listdir(TESTPKG, "/".join([root_dir, tc_dir]))
+    testcases: list[SchemaTestCase] = []
 
-        schema = "/".join((root_dir, tc_dir, "schema.rng"))
+    for tc_dir in testcases_dir.iterdir():
+        tc_dir_url = uri.resolve(testcases_url, f"{tc_dir.name}/")
+
+        schema = tc_dir / "schema.rng"
         positive_cases = [
-            "/".join([root_dir, tc_dir, f])
-            for f in files
-            if re.match(r"^positive.*\.xml$", f)
+            f for f in tc_dir.iterdir() if re.match(r"^positive.*\.xml$", f.name)
         ]
         negative_cases = [
-            "/".join([root_dir, tc_dir, f])
-            for f in files
-            if re.match(r"^negative.*\.xml$", f)
+            f for f in tc_dir.iterdir() if re.match(r"^negative.*\.xml$", f.name)
         ]
 
-        assert positive_cases
-        assert not [
-            f
-            for _files in [[schema], positive_cases, negative_cases]
-            for f in _files
-            if not pr.resource_exists(TESTPKG, f)
-        ]
+        assert len(positive_cases) > 0
 
-        for file in positive_cases:
-            testcases.append((schema, file, True))
-        for file in negative_cases:
-            testcases.append((schema, file, False))
+        testcases.extend(
+            SchemaTestCase(
+                base_url=tc_dir_url,
+                schema_file=schema,
+                xml_file=file,
+                should_match=should_match,
+            )
+            for (files, should_match) in [
+                (positive_cases, True),
+                (negative_cases, False),
+            ]
+            for file in files
+        )
 
-    assert testcases
+    assert len(testcases) > 0
     return testcases
 
 
@@ -119,15 +137,10 @@ def test_inlined_files_dont_inherit_datatype(schema_path: str) -> None:
         etree.RelaxNG(grammar)
 
 
-def _testcase_id(tc: "TestCase") -> str:
-    prefix = "data/testcases/"
-    schema, file, should_match = tc
-
-    assert schema.startswith(prefix)
-    assert file.startswith(prefix)
-
-    return "{0},{1},{2}".format(
-        schema[len(prefix) :], file[len(prefix) :], should_match
+def _testcase_id(tc: SchemaTestCase) -> str:
+    return (
+        f"name={tc.name},schema={tc.schema_file.name},xml={tc.xml_file.name},"
+        f"should_match={tc.should_match}"
     )
 
 
@@ -135,30 +148,30 @@ test_testcases_testcases = _load_testcases()
 ttt_ids = [_testcase_id(tc) for tc in test_testcases_testcases]
 
 
-@pytest.mark.parametrize(
-    "schema_file,test_file,should_match", test_testcases_testcases, ids=ttt_ids
-)
-def test_testcases(schema_file: str, test_file: str, should_match: bool) -> None:
-    schema = rnginline.inline(urlhandlers.pydata.makeurl(TESTPKG, schema_file))
+@pytest.mark.parametrize("example", test_testcases_testcases, ids=ttt_ids)
+def test_testcases(example: SchemaTestCase) -> None:
+    schema = rnginline.inline(example.schema_url)
 
-    xml = etree.parse(pr.resource_stream(TESTPKG, test_file))
+    with importlib_resources.as_file(example.xml_file) as xml_path:
+        with xml_path.open("rb") as xml_file:
+            xml = etree.parse(xml_file)
 
-    if should_match:
+    if example.should_match:
         try:
             # Should match
             schema.assertValid(xml)
         except etree.DocumentInvalid:
             pytest.fail(
-                "{0} should match {1} but didn't: {2}".format(
-                    test_file, schema_file, schema.error_log
-                )
+                f"{example.xml_file.name} should match {example.schema_file.name} "
+                f"but didn't: {schema.error_log}"
             )
     else:
         with pytest.raises(etree.DocumentInvalid):
             # Shouldn't match
             schema.assertValid(xml)
             pytest.fail(
-                "{0} shouldn't match {1} but did".format(test_file, schema_file)
+                f"{example.xml_file.name} shouldn't match "
+                f"{example.schema_file.name} but did"
             )
 
 
