@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0]
+
 ### Changed
 
 - Supported Python versions are now 3.7 – 3.11 (inclusive)
@@ -15,7 +19,8 @@ and this project adheres to
 
 ### Fixed
 
-- Handle indirectly-included components when overriding (#5)
+- Handle indirectly-included components when overriding
+  ([#5](https://github.com/h4l/rnginline/issues/5))
 
   Previously when inlining `<include>` elements, the include's override
   components were only able to override components that directly occurred in the
@@ -38,13 +43,14 @@ and this project adheres to
 ### Fixed
 
 - Old data file with non-ascii filename was being included in the 0.0.1 build
-  (#2).
+  ([#2](https://github.com/h4l/rnginline/issues/2)).
 
 ## [0.0.1] — 2015-03-29
 
 Initial release
 
 [unreleased]:
-  https://github.com/olivierlacan/keep-a-changelog/compare/0.0.2...HEAD
+  https://github.com/olivierlacan/keep-a-changelog/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/h4l/rnginline/compare/0.0.2...1.0.0
 [0.0.2]: https://github.com/h4l/rnginline/compare/0.0.1...0.0.2
 [0.0.1]: https://github.com/h4l/rnginline/releases/tag/0.0.1
