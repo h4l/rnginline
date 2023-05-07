@@ -1,0 +1,56 @@
+name: CI
+on: [push]
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - run: pip install poetry && poetry install --only main --only test
+      - run: poetry run make test
+
+  test-all-python-versions:
+    runs-on: ubuntu-latest
+    env:
+      BUILDKIT_PROGRESS: plain
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y direnv
+          direnv allow
+      - run: direnv exec . docker compose --profile unit_test up --abort-on-container-exit
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - run: pip install poetry && poetry install --only main --only typing --only test
+      - run: poetry run make typecheck
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - run: pip install poetry && poetry install --only lint --only fmt
+      - run: poetry run make lint
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - run: pip install poetry
+      - run: poetry install --only main --only docs --only test
+      - run: poetry run make test-docs docs

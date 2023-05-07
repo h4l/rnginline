@@ -1,0 +1,44 @@
+name: release
+on: [push]
+jobs:
+  pypi-publish:
+    name: Test release packages and upload to PyPI
+    environment: release
+    runs-on: ubuntu-latest
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    env:
+      BUILDKIT_PROGRESS: plain
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y direnv
+          direnv allow
+          pip install poetry
+      - name: Build the release packages
+        run: |
+          poetry build
+          sha256sum dist/*
+      - name: Verify that the built packages work on all supported Python versions
+        run: direnv exec . docker compose --profile distribution_test up --abort-on-container-exit
+
+      # Always push to Test PyPI
+      - name: Publish distribution 📦 to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          print-hash: true
+
+      # only publish tagged commits to PyPI
+      - name: Publish distribution 📦 to PyPI
+        if: startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true

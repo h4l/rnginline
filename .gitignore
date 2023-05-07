@@ -12,5 +12,6 @@ htmlcov/
 !/.envrc
 !/.git
 !/.gitattributes
+!/.github
 !/.gitignore
 !/.prettierrc
