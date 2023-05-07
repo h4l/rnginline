@@ -16,6 +16,8 @@ Nothing yet.
 
 - Supported Python versions are now 3.7 – 3.11 (inclusive)
 - Project codebase & tooling refreshed
+- Get `rnginline.__version__` / `rnginline --version` from package metadata
+  instead of hardcoding it.
 
 ### Fixed
 

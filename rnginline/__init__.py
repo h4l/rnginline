@@ -23,6 +23,7 @@ from typing import (
     overload,
 )
 
+from importlib_metadata import version
 from lxml import etree
 from typing_extensions import Final, Literal, Protocol
 
@@ -43,7 +44,7 @@ from rnginline.exceptions import (
     SchemaIncludesSelfError,
 )
 
-__version__ = "0.0.2"
+__version__ = version("rnginline")
 
 __all__ = ["inline", "Inliner"]
 

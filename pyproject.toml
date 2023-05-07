@@ -31,6 +31,7 @@ docopt-ng = "^0.8.1"
 lxml = "^4"
 python = "^3.7"
 typing-extensions = "^4.5.0"
+importlib-metadata = "^6.6.0"
 
 [tool.poetry.group.dev.dependencies]
 tox = "^3.25.1"
