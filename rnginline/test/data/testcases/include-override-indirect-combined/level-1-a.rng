@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+
+    <include href="level-2-a.rng"/>
+    <include href="level-2-b.rng"/>
+
+    <define name="animal.attribute" combine="interleave">
+        <optional>
+            <attribute name="age">
+                <text/>
+            </attribute>
+        </optional>
+    </define>
+</grammar>

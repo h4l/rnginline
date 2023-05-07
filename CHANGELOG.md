@@ -15,6 +15,19 @@ and this project adheres to
 
 ### Fixed
 
+- Handle indirectly-included components when overriding (#5)
+
+  Previously when inlining `<include>` elements, the include's override
+  components were only able to override components that directly occurred in the
+  included schema. If the included schema itself didn't directly contain an
+  overridden `<define>` or `<start>` element, but instead included another
+  schema that did contain an overridden element, `rnginline` would fail to find
+  the indirectly-included element(s) and would fail with an error. (Because
+  overrides must match elements in the included schema.)
+
+  Thanks to [takesson](https://github.com/takesson) for reporting this and
+  providing a test case to demonstrate the issue.
+
 - Resolved deprecation warnings from:
   - old string escape syntax
   - `pkg_resources` module (we now use `importlib_resources`)

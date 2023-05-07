@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+
+    <start>
+        <element name="start-from-level-2">
+            <empty/>
+        </element>
+    </start>
+
+    <define name="content">
+        <choice>
+            <!-- Allow both 'one' and 'two'. -->
+            <ref name="one.element"/>
+            <ref name="two.element"/>
+        </choice>
+    </define>
+
+    <define name="one.element">
+        <element name="one">
+            <ref name="atts"/>
+            <empty/>
+        </element>
+    </define>
+
+    <define name="two.element">
+        <element name="two">
+            <ref name="atts"/>
+            <empty/>
+        </element>
+    </define>
+
+    <define name="atts">
+        <interleave>
+            <optional><attribute name="a"/></optional>
+            <optional><attribute name="b"/></optional>
+        </interleave>
+    </define>
+</grammar>

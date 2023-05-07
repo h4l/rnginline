@@ -139,8 +139,8 @@ def test_inlined_files_dont_inherit_datatype(schema_path: str) -> None:
 
 def _testcase_id(tc: SchemaTestCase) -> str:
     return (
-        f"name={tc.name},schema={tc.schema_file.name},xml={tc.xml_file.name},"
-        f"should_match={tc.should_match}"
+        f"name:{tc.name},schema:{tc.schema_file.name},xml:{tc.xml_file.name},"
+        f"should_match:{tc.should_match}"
     )
 
 
@@ -245,6 +245,30 @@ def test_deferred_xml_insertion__perform_insertions_can_only_happen_once() -> No
     # We don't allow insertions to be performed twice, as it's never necessary
     with pytest.raises(AssertionError):
         dxi.perform_insertions()  # second time
+
+
+def test_deferred_xml_insertion__iter_root_elements() -> None:
+    level0 = etree.XML("""<level0><thing/></level0>""")
+    level1a = etree.XML("""<level1a><thing/></level1a>""")
+    level1b = etree.XML("""<level1b/>""")
+    level2a = etree.XML("""<level2a/>""")
+    level2b = etree.XML("""<level2b/>""")
+    other = etree.XML("""<foo/>""")
+
+    dxi_l1a = DeferredXmlInsertion(level1a)
+    dxi_l1a.register_replace(
+        old_el=list(level1a)[0], new_el=DeferredXmlInsertion(level2a)
+    )
+    dxi_l1b = DeferredXmlInsertion(level1b)
+    dxi_l1b.register_insert(parent=level1b, index=0, el=DeferredXmlInsertion(level2b))
+
+    dxi = DeferredXmlInsertion(level0)
+    dxi.register_replace(old_el=list(level0)[0], new_el=dxi_l1a)
+    dxi.register_insert(parent=level0, index=1, el=dxi_l1b)
+    dxi.register_insert(parent=level0, index=2, el=other)
+
+    roots = [root for root in dxi.iter_root_elements()]
+    assert roots == [level0, level1a, level2a, level1b, level2b, other]
 
 
 def test_foreign_attrs_cant_be_in_default_ns() -> None:

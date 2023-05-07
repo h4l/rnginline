@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+
+    <include href="level-2-a.rng">
+        <!-- Important: no redefine of 'content'. -->
+
+        <!-- Redefine atts in intermediate.rng to demonstrate both levels of redefine. -->
+        <define name="atts">
+            <optional><attribute name="a"/></optional>
+        </define>
+    </include>
+</grammar>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <include href="level-1-a.rng">
+        <!-- Both start and the "content" define override things that are not
+             directly in intermediate.rng, they're in common.rng which is
+             included by intermediate.rng. -->
+        <start>
+            <ref name="start.element"/>
+        </start>
+        <define name="content">
+            <ref name="one.element"/>
+        </define>
+    </include>
+
+    <div>
+        <define name="start.element">
+            <element name="start">
+                <ref name="content"></ref>
+            </element>
+        </define>
+    </div>
+</grammar>

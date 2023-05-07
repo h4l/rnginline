@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <define name="animal.element" combine="choice">
+        <element name="horse">
+            <ref name="animal.attrs"/>
+        </element>
+    </define>
+
+    <start combine="choice">
+        <element name="removed-via-override-b">
+            <empty/>
+        </element>
+    </start>
+</grammar>

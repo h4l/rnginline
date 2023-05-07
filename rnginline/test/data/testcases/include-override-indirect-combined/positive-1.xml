@@ -1,0 +1,9 @@
+<animals>
+    <pig favourite-food="slop"/>
+    <rabbit birthday="2022-01-01"/>
+    <goat favourite-food="plastic" birthday="2021-01-01"/>
+    <pig/>
+    <rabbit/>
+    <goat/>
+</animals>
+

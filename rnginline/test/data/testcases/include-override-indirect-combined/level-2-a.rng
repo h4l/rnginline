@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+
+    <define name="animal.element" combine="choice">
+        <element name="dog">
+            <ref name="animal.attrs"/>
+        </element>
+    </define>
+
+    <define name="animal.element" combine="choice">
+        <element name="sheep">
+            <ref name="animal.attrs"/>
+        </element>
+    </define>
+
+    <define name="animal.attrs" combine="interleave">
+        <optional>
+            <attribute name="name">
+                <text/>
+            </attribute>
+        </optional>
+    </define>
+
+    <define name="animal.attrs" combine="interleave">
+        <optional>
+            <attribute name="colour">
+                <text/>
+            </attribute>
+        </optional>
+    </define>
+
+    <start combine="choice">
+        <element name="removed-via-override-a">
+            <empty/>
+        </element>
+    </start>
+</grammar>

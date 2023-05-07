@@ -714,7 +714,7 @@ class Inliner:
         if "datatypeLibrary" not in grammar.attrib:
             grammar.attrib["datatypeLibrary"] = ""
 
-        self._remove_overridden_components(include, grammar)
+        self._remove_overridden_components(include, grammar_dxi)
 
         include.tag = RNG_DIV_TAG
         del include.attrib["href"]
@@ -728,14 +728,20 @@ class Inliner:
         dxi.register_insert(include, 0, grammar_dxi)
 
     def _remove_overridden_components(
-        self, include: etree._Element, grammar: etree._Element
+        self, include: etree._Element, grammar_dxi: DeferredXmlInsertion
     ) -> None:
+        # grammar_dxi is being included into the include element. include can
+        # contain <start> or <define name="..."> ""component"" elements that
+        # override equivalently-named elements inside grammar_dxi. These
+        # override components *must* pair with exist in grammar_dxi. And they can be
+        # indirectly included into grammar_dxi, so they may be in a child DXI of
+        # grammar_dxi that's yet to be merged.
         override_starts, override_defines = self._grouped_components(include)
 
         if not (override_starts or override_defines):
             return
 
-        starts, defines = self._grouped_components(grammar)
+        starts, defines = self._grouped_components(grammar_dxi)
 
         if override_starts:
             if len(starts) == 0:
@@ -762,12 +768,12 @@ class Inliner:
             parent.remove(el)
 
     def _grouped_components(
-        self, el: etree._Element
+        self, start: etree._Element | DeferredXmlInsertion
     ) -> tuple[Sequence[etree._Element], Mapping[str, Sequence[etree._Element]]]:
         starts: list[etree._Element] = []
         defines: dict[str, list[etree._Element]] = collections.defaultdict(list)
 
-        for c in self._raw_components(el):
+        for c in self._raw_components(start):
             if c.tag == RNG_START_TAG:
                 starts.append(c)
             else:
@@ -779,6 +785,16 @@ class Inliner:
         return (starts, defines)
 
     def _raw_components(
+        self, start: etree._Element | DeferredXmlInsertion
+    ) -> Generator[etree._Element, None, None]:
+        if isinstance(start, DeferredXmlInsertion):
+            assert start.get_root_el().tag == RNG_GRAMMAR_TAG
+            for el in start.iter_root_elements():
+                yield from self._raw_components_under_element(el)
+        else:
+            yield from self._raw_components_under_element(start)
+
+    def _raw_components_under_element(
         self, el: etree._Element
     ) -> Generator[etree._Element, None, None]:
         """
@@ -796,7 +812,7 @@ class Inliner:
         # Recursively yield the components of child divs
         div_children = el.xpath("rng:div", namespaces=NSMAP)
         for div in div_children:
-            for component in self._raw_components(div):
+            for component in self._raw_components_under_element(div):
                 yield component
 
     def _inline_external_refs(
@@ -908,6 +924,18 @@ class DeferredXmlInsertion:
 
     def get_root_el(self) -> etree._Element:
         return self.root_el
+
+    def iter_root_elements(self) -> Generator[etree._Element, None, None]:
+        """
+        Generate the root elements of all XML trees that will be included in the
+        merged tree returned by perform_insertions().
+        """
+        yield self.root_el
+        for _, root in self.pending_insertions:
+            if isinstance(root, DeferredXmlInsertion):
+                yield from root.iter_root_elements()
+            else:
+                yield root
 
     def register_insert(
         self,
