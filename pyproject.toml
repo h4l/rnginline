@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rnginline"
-version = "1.0.0a0"
+version = "1.0.0"
 description = "Flatten multi-file RELAX NG schemas"
 readme = "README.md"
 authors = ["Hal Blackburn <hwtb2@cam.ac.uk>"]
